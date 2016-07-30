@@ -1,8 +1,9 @@
+from collections import OrderedDict
+
 import pandas as pd
 import requests
 import xmltodict
-
-# from xlwings import Workbook, Range
+from lxml import etree
 
 ##################
 sxSeason = False
@@ -34,6 +35,32 @@ elif sxSeason is False:
     infoUrl = baseURL + 'Announcements.json'
 else:
     print('What season is it?')
+
+
+def get_race_info():
+    info = requests.get(infoUrl).json()
+    raceInfo = info["S"].split(' (', 1)[0]  # '450 Class Moto #2'
+    motoNum = raceInfo.split('#', 1)[1]
+    motoClass = raceInfo.split(' ', 1)[0]
+    raceLocation = info["T"]  # Race location/name - 'Washougal'
+    raceDescr = raceInfo + ' at ' + raceLocation
+    print(raceDescr)
+
+
+def live_timing_xml_parse():
+    lt_attrs = ['@A', '@N', '@F', '@L', '@G', '@D', '@LL',
+                '@BL', '@S', '@S1', '@S2', '@S3', '@S4']
+    lt_keys = ['pos', 'num', 'name', 'laps', 'gap', 'diff', 'lastlap',
+               'bestlap', 'status', 'seg1', 'seg2', 'seg3', 'seg4']
+
+    tree = etree.parse(liveTimingURL)
+    lt_values = []
+    for i in range(len(lt_attrs)):
+        value = tree.xpath('//A/B/' + lt_attrs[i])
+        lt_values.append(value)
+    lt_dict = OrderedDict(zip(lt_keys, lt_values))
+    df_liveTiming = pd.DataFrame(lt_dict)
+    print(df_liveTiming)
 
 
 def live_timing_update():
@@ -84,7 +111,10 @@ def live_timing_update():
 #         schedule.run_pending()
 #         time.sleep(1)
 
-live_timing_update()
+# get_race_info()
+live_timing_xml_parse()
+
+# live_timing_update()
 
 # if __name__ == '__main__':
 #     # To run from Python, not needed when called from Excel.
