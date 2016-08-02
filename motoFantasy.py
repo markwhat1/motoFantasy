@@ -3,7 +3,8 @@ from collections import OrderedDict
 import pandas as pd
 import requests
 import xmltodict
-from lxml import etree
+from lxml import etree, html
+from lxml.cssselect import CSSSelector
 
 ##################
 sxSeason = False
@@ -20,7 +21,7 @@ if sxSeason is True:
     baseURL = 'http://live.amasupercross.com/xml/sx/'
     liveTimingURL = baseURL + 'RaceResultsWeb.xml'
     infoUrl = baseURL + 'Announcements.json'
-elif sxSeason is False:
+elif sxSeason is False:  # i.e. it is motocross season
     # Extend points to 40 positions and use the proper XML URL
     points = [25, 22, 20, 18, 16, 15, 14, 13, 12, 11,  # 1-10
               10, 9, 8, 7, 6, 5, 4, 3, 2, 1,  # 11-20
@@ -36,31 +37,104 @@ elif sxSeason is False:
 else:
     print('What season is it?')
 
+mf_URL = 'https://www.motocrossfantasy.com/'
+mf_ResultsURL = 'https://www.motocrossfantasy.com/user/race-results'
+
+def mf_auth():
+    username = 'markwhat'
+    password = 'yamaha'
+    payload = {
+        'login_username': username,
+        'login_password': password,
+        'login': 'true'
+    }
+
+    s = requests.Session()
+    r = s.post(mf_URL, data=payload)
+    return s
+
+
+def mf_scrape():
+    s = mf_auth()
+    r = s.get(mf_ResultsURL)
+    data = html.fromstring(r.text)
+    tree = data.str
+
+    sel = CSSSelector('table')
+    tableSel = CSSSelector('tr')
+    dataSel = CSSSelector('td')
+    tables = sel(tree)
+    results_450 = tables[0]
+    results250 = [['place'], ['name'], ['positions'], ['hc'], ['points'], ['u-dog']]
+    places = []
+    # for i in range(len(rows)):
+    for tr in tableSel(tables[1]):
+        columns = dataSel(tr)
+        for i in range(len(columns)):
+            # if columns[i].text is not None:
+            places.append(columns[i].text)
+
+        # print(len(columns))
+        # print(columns[1].text_content())
+        # places.append(columns[0])
+        # for td in tr.findall('td'):
+        #     places.append(td.text_content())
+
+    print(places)
+
+
+    #
+    # for table in list(tables):
+    #     table =
+    # print(tables[0].text_content())
+    # print(tables[0].getroot())
+    # print(tree)
+    # print(type(tree))
+    # myparser = etree.HTMLParser(encoding="utf-8")
+    # tree2 = etree.HTML(results.content, parser=myparser)
+    # print(tree2)
+    # print(type(tree2))
+    # tree = html.fromstring(results.content)
+    # print(tree)
+    # print(type(tree))
+    # tables = sel(tree)
+    # root = html.fromstring(tables[0], method='html')
+    # print(root)
+    # results_450 = html.tostring(tables[0], method='html')
+    # results_250 = html.tostring(tables[1], method='html')
+    # print(etree.tostring(tables[0], method='html', pretty_print=True))
+    # print()
+    # print(results_450)
+    # print(tables)
+    # table = tree.xpath('//table')[1]
+
+
 
 def get_race_info():
     info = requests.get(infoUrl).json()
     raceInfo = info["S"].split(' (', 1)[0]  # '450 Class Moto #2'
-    motoNum = raceInfo.split('#', 1)[1]
-    motoClass = raceInfo.split(' ', 1)[0]
+    # motoNum = raceInfo.split('#', 1)[1]
+    # motoClass = raceInfo.split(' ', 1)[0]
     raceLocation = info["T"]  # Race location/name - 'Washougal'
-    raceDescr = raceInfo + ' at ' + raceLocation
-    print(raceDescr)
+    raceDesc = raceInfo + ' at ' + raceLocation
+    print(raceDesc)
+    return raceDesc
 
 
 def live_timing_xml_parse():
-    lt_attrs = ['@A', '@N', '@F', '@L', '@G', '@D', '@LL',
-                '@BL', '@S', '@S1', '@S2', '@S3', '@S4']
-    lt_keys = ['pos', 'num', 'name', 'laps', 'gap', 'diff', 'lastlap',
-               'bestlap', 'status', 'seg1', 'seg2', 'seg3', 'seg4']
-
-    tree = etree.parse(liveTimingURL)
+    lt_attrs = ['@N', '@F', '@L', '@G', '@D', '@LL', '@BL',
+                '@S', '@S1', '@S2', '@S3', '@S4']
+    lt_keys = ['num', 'name', 'laps', 'gap', 'diff', 'lastlap', 'bestlap',
+               'status', 'seg1', 'seg2', 'seg3', 'seg4']
     lt_values = []
+    tree = etree.parse(liveTimingURL)
     for i in range(len(lt_attrs)):
         value = tree.xpath('//A/B/' + lt_attrs[i])
         lt_values.append(value)
     lt_dict = OrderedDict(zip(lt_keys, lt_values))
-    df_liveTiming = pd.DataFrame(lt_dict)
-    print(df_liveTiming)
+    df_livetiming = pd.DataFrame(lt_dict, index=list(range(1,41)))
+    df_livetiming.index.name = 'pos'
+    print(df_livetiming)
 
 
 def live_timing_update():
@@ -111,9 +185,9 @@ def live_timing_update():
 #         schedule.run_pending()
 #         time.sleep(1)
 
+# mf_scrape()
 # get_race_info()
 live_timing_xml_parse()
-
 # live_timing_update()
 
 # if __name__ == '__main__':
