@@ -67,7 +67,6 @@ def mf_scrape():
     results_450 = tables[0]
     results250 = [['place'], ['name'], ['positions'], ['hc'], ['points'], ['u-dog']]
     places = []
-    # for i in range(len(rows)):
     for tr in tableSel(tables[1]):
         columns = dataSel(tr)
         for i in range(len(columns)):
