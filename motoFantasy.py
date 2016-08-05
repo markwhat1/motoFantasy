@@ -41,8 +41,8 @@ mf_URL = 'https://www.motocrossfantasy.com/'
 mf_ResultsURL = 'https://www.motocrossfantasy.com/user/race-results'
 
 def mf_auth():
-    username = 'markwhat'
-    password = 'yamaha'
+    username = '********'
+    password = '******'
     payload = {
         'login_username': username,
         'login_password': password,
