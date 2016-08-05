@@ -10,38 +10,42 @@ from lxml.cssselect import CSSSelector
 sxSeason = False
 ##################
 
+# Points Lists
 points_sx = [25, 22, 20, 18, 16, 15, 14, 13, 12, 11,  # 1-10
-             10, 9, 8, 7, 6, 5, 4, 3, 2, 1,  # 11-20
-             1, 1]  # 21-22
+             10, 9, 8, 7, 6, 5, 4, 3, 2, 1,           # 11-20
+             1, 1]                                    # 21-22
 points_mx = [25, 22, 20, 18, 16, 15, 14, 13, 12, 11,  # 1-10
-             10, 9, 8, 7, 6, 5, 4, 3, 2, 1,  # 11-20
-             0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  # 21-30
-             0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # 31-40
+             10, 9, 8, 7, 6, 5, 4, 3, 2, 1,           # 11-20
+             0, 0, 0, 0, 0, 0, 0, 0, 0, 0,            # 21-30
+             0, 0, 0, 0, 0, 0, 0, 0, 0, 0]            # 31-40
 udogPoints_sx = [50, 44, 40, 36, 32, 30, 28, 26, 24, 22,  # 1-10, 2x
-                 10, 9, 8, 7, 6, 5, 4, 3, 2, 1,  # 11-20
-                 1, 1]  # 21-22
+                 10, 9, 8, 7, 6, 5, 4, 3, 2, 1,           # 11-20
+                 1, 1]                                    # 21-22
 udogPoints_mx = [50, 44, 40, 36, 32, 30, 28, 26, 24, 22,  # 1-10, 2x
-                 10, 9, 8, 7, 6, 5, 4, 3, 2, 1,  # 11-20
-                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  # 21-30
-                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # 31-40
+                 10, 9, 8, 7, 6, 5, 4, 3, 2, 1,           # 11-20
+                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,            # 21-30
+                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]            # 31-40
+
+# Live Timing URLS
 baseurl_sx = 'http://live.amasupercross.com/xml/sx/'
 baseurl_mx = 'http://americanmotocrosslive.com/xml/mx/'
 raceInfoUrl = 'Announcements.json'
 raceResultsUrl = 'RaceResultsWeb.xml'
 
+# MotocrossFantasy.com URLS
+mf_URL = 'https://www.motocrossfantasy.com/'
+mf_ResultsURL = 'https://www.motocrossfantasy.com/user/race-results'
+
 if sxSeason is True:
     points, udogPoints = points_sx, udogPoints_sx
     infoUrl = baseurl_sx + raceInfoUrl
     iveTimingURL = baseurl_sx + raceResultsUrl
-elif sxSeason is False:  # i.e. it is motocross season
+elif sxSeason is False:  # i.e. it is MX season
     points, udogPoints = points_mx, udogPoints_mx
     infoUrl = baseurl_mx + raceInfoUrl
     iveTimingURL = baseurl_mx + raceResultsUrl
 else:
     print('...What season is it?')
-
-mf_URL = 'https://www.motocrossfantasy.com/'
-mf_ResultsURL = 'https://www.motocrossfantasy.com/user/race-results'
 
 
 def mf_auth():
@@ -179,12 +183,6 @@ def live_timing_update():
     # return df_liveTiming
 
 
-# def autoLiveTiming():
-#     schedule.every(10).seconds.do(live_timing_update)
-#     while 1:
-#         schedule.run_pending()
-#         time.sleep(1)
-
 # mf_scrape()
 # get_race_info()
 live_timing_xml_parse()
@@ -193,7 +191,9 @@ live_timing_xml_parse()
 # if __name__ == '__main__':
 #     # To run from Python, not needed when called from Excel.
 #     # Expects the Excel file next to this source file, adjust accordingly.
-#     path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'myfile.xlsm'))
-#     path = 'C:\\Users\\mwhatc\\Google Drive\\Spreadsheets\\fantasy motocross\\'
+#     path =
+#     os.path.abspath(os.path.join(os.path.dirname(__file__),'myfile.xlsm'))
+#     path = 'C:\\Users\\mwhatc\\Google Drive\\Spreadsheets\\fantasy
+#     motocross\\'
 #     Workbook.set_mock_caller(path + 'motoFantasy.xlsm')
 #     live_timing_update()
