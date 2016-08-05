@@ -10,35 +10,39 @@ from lxml.cssselect import CSSSelector
 sxSeason = False
 ##################
 
+points_sx = [25, 22, 20, 18, 16, 15, 14, 13, 12, 11,  # 1-10
+             10, 9, 8, 7, 6, 5, 4, 3, 2, 1,  # 11-20
+             1, 1]  # 21-22
+points_mx = [25, 22, 20, 18, 16, 15, 14, 13, 12, 11,  # 1-10
+             10, 9, 8, 7, 6, 5, 4, 3, 2, 1,  # 11-20
+             0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  # 21-30
+             0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # 31-40
+udogPoints_sx = [50, 44, 40, 36, 32, 30, 28, 26, 24, 22,  # 1-10, 2x
+                 10, 9, 8, 7, 6, 5, 4, 3, 2, 1,  # 11-20
+                 1, 1]  # 21-22
+udogPoints_mx = [50, 44, 40, 36, 32, 30, 28, 26, 24, 22,  # 1-10, 2x
+                 10, 9, 8, 7, 6, 5, 4, 3, 2, 1,  # 11-20
+                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  # 21-30
+                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # 31-40
+baseurl_sx = 'http://live.amasupercross.com/xml/sx/'
+baseurl_mx = 'http://americanmotocrosslive.com/xml/mx/'
+raceInfoUrl = 'Announcements.json'
+raceResultsUrl = 'RaceResultsWeb.xml'
+
 if sxSeason is True:
-    # Limit points to 22 positions and use the proper XML URL
-    points = [25, 22, 20, 18, 16, 15, 14, 13, 12, 11,  # 1-10
-              10, 9, 8, 7, 6, 5, 4, 3, 2, 1,  # 11-20
-              1, 1]  # 21-22
-    udogPoints = [50, 44, 40, 36, 32, 30, 28, 26, 24, 22,  # 1-10, 2x
-                  10, 9, 8, 7, 6, 5, 4, 3, 2, 1,  # 11-20
-                  1, 1]  # 21-22
-    baseURL = 'http://live.amasupercross.com/xml/sx/'
-    liveTimingURL = baseURL + 'RaceResultsWeb.xml'
-    infoUrl = baseURL + 'Announcements.json'
+    points, udogPoints = points_sx, udogPoints_sx
+    infoUrl = baseurl_sx + raceInfoUrl
+    iveTimingURL = baseurl_sx + raceResultsUrl
 elif sxSeason is False:  # i.e. it is motocross season
-    # Extend points to 40 positions and use the proper XML URL
-    points = [25, 22, 20, 18, 16, 15, 14, 13, 12, 11,  # 1-10
-              10, 9, 8, 7, 6, 5, 4, 3, 2, 1,  # 11-20
-              0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  # 21-30
-              0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # 31-40
-    udogPoints = [50, 44, 40, 36, 32, 30, 28, 26, 24, 22,  # 1-10, 2x
-                  10, 9, 8, 7, 6, 5, 4, 3, 2, 1,  # 11-20
-                  0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  # 21-30
-                  0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # 31-40
-    baseURL = 'http://americanmotocrosslive.com/xml/mx/'
-    liveTimingURL = baseURL + 'RaceResultsWeb.xml'
-    infoUrl = baseURL + 'Announcements.json'
+    points, udogPoints = points_mx, udogPoints_mx
+    infoUrl = baseurl_mx + raceInfoUrl
+    iveTimingURL = baseurl_mx + raceResultsUrl
 else:
-    print('What season is it?')
+    print('...What season is it?')
 
 mf_URL = 'https://www.motocrossfantasy.com/'
 mf_ResultsURL = 'https://www.motocrossfantasy.com/user/race-results'
+
 
 def mf_auth():
     username = '********'
@@ -65,7 +69,8 @@ def mf_scrape():
     dataSel = CSSSelector('td')
     tables = sel(tree)
     results_450 = tables[0]
-    results250 = [['place'], ['name'], ['positions'], ['hc'], ['points'], ['u-dog']]
+    results250 = [['place'], ['name'], ['positions'],
+                  ['hc'], ['points'], ['u-dog']]
     places = []
     for tr in tableSel(tables[1]):
         columns = dataSel(tr)
@@ -81,8 +86,6 @@ def mf_scrape():
 
     print(places)
 
-
-    #
     # for table in list(tables):
     #     table =
     # print(tables[0].text_content())
@@ -108,7 +111,6 @@ def mf_scrape():
     # table = tree.xpath('//table')[1]
 
 
-
 def get_race_info():
     info = requests.get(infoUrl).json()
     raceInfo = info["S"].split(' (', 1)[0]  # '450 Class Moto #2'
@@ -131,7 +133,7 @@ def live_timing_xml_parse():
         value = tree.xpath('//A/B/' + lt_attrs[i])
         lt_values.append(value)
     lt_dict = OrderedDict(zip(lt_keys, lt_values))
-    df_livetiming = pd.DataFrame(lt_dict, index=list(range(1,41)))
+    df_livetiming = pd.DataFrame(lt_dict, index=list(range(1, 41)))
     df_livetiming.index.name = 'pos'
     print(df_livetiming)
 
@@ -168,13 +170,12 @@ def live_timing_update():
     # keyValues = ['pos', 'name', 'num', 'laps', 'gap',
     #              'diff', 'lastlap', 'bestlap', 'status']
 
-
-
     # Output the results
     # if df_liveTiming.empty:
     #     Range('liveTimingData', 'A1').value = "Error in data collection"
     # else:
-    #     Range('liveTimingData', 'A1').options(index=True).value = df_liveTiming
+    #     Range('liveTimingData', 'A1').options(
+    # index=True).value = df_liveTiming
     # return df_liveTiming
 
 
@@ -192,7 +193,7 @@ live_timing_xml_parse()
 # if __name__ == '__main__':
 #     # To run from Python, not needed when called from Excel.
 #     # Expects the Excel file next to this source file, adjust accordingly.
-#     # path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'myfile.xlsm'))
+#     path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'myfile.xlsm'))
 #     path = 'C:\\Users\\mwhatc\\Google Drive\\Spreadsheets\\fantasy motocross\\'
 #     Workbook.set_mock_caller(path + 'motoFantasy.xlsm')
 #     live_timing_update()
