@@ -1,6 +1,8 @@
+from bs4 import BeautifulSoup
 from collections import OrderedDict
 
 import pandas as pd
+import re
 import requests
 import xmltodict
 from lxml import etree, html
@@ -35,6 +37,7 @@ raceResultsUrl = 'RaceResultsWeb.xml'
 # MotocrossFantasy.com URLS
 mf_URL = 'https://www.motocrossfantasy.com/'
 mf_ResultsURL = 'https://www.motocrossfantasy.com/user/race-results'
+mf_riderListsURL = 'https://www.motocrossfantasy.com/user/team-status'
 
 if sxSeason is True:
     points, udogPoints = points_sx, udogPoints_sx
@@ -49,8 +52,8 @@ else:
 
 
 def mf_auth():
-    username = '********'
-    password = '******'
+    username = 'markwhat'
+    password = 'yamaha'
     payload = {
         'login_username': username,
         'login_password': password,
@@ -62,57 +65,44 @@ def mf_auth():
     return s
 
 
-def mf_scrape():
+def mf_scrape(url, division):
+    if division == 450:
+        index = 0
+    elif division == 250:
+        index = 1
+    else:
+        index = 0
+
     s = mf_auth()
-    r = s.get(mf_ResultsURL)
-    data = html.fromstring(r.text)
-    tree = data.str
+    r = s.get(url)
+    soup = BeautifulSoup(r.text, 'lxml')
+    tables = soup.find_all('table')
+    mf_table = tables[index]
 
-    sel = CSSSelector('table')
-    tableSel = CSSSelector('tr')
-    dataSel = CSSSelector('td')
-    tables = sel(tree)
-    results_450 = tables[0]
-    results250 = [['place'], ['name'], ['positions'],
-                  ['hc'], ['points'], ['u-dog']]
-    places = []
-    for tr in tableSel(tables[1]):
-        columns = dataSel(tr)
-        for i in range(len(columns)):
-            # if columns[i].text is not None:
-            places.append(columns[i].text)
+    heads = mf_table.find_all('th')
+    headers = [th.text for th in heads]
 
-        # print(len(columns))
-        # print(columns[1].text_content())
-        # places.append(columns[0])
-        # for td in tr.findall('td'):
-        #     places.append(td.text_content())
+    data = [[] for i in range(len(headers))]
+    rows = mf_table.find_all('tr')
+    for row in rows:
+        cols = row.find_all('td')
+        for i in range(len(data)):
+            if len(cols) > 0:
+                data[i].append(cols[i].text)
 
-    print(places)
+    df = pd.DataFrame(data)
+    df = df.transpose()
+    df.columns = headers
+    return df
 
-    # for table in list(tables):
-    #     table =
-    # print(tables[0].text_content())
-    # print(tables[0].getroot())
-    # print(tree)
-    # print(type(tree))
-    # myparser = etree.HTMLParser(encoding="utf-8")
-    # tree2 = etree.HTML(results.content, parser=myparser)
-    # print(tree2)
-    # print(type(tree2))
-    # tree = html.fromstring(results.content)
-    # print(tree)
-    # print(type(tree))
-    # tables = sel(tree)
-    # root = html.fromstring(tables[0], method='html')
-    # print(root)
-    # results_450 = html.tostring(tables[0], method='html')
-    # results_250 = html.tostring(tables[1], method='html')
-    # print(etree.tostring(tables[0], method='html', pretty_print=True))
-    # print()
-    # print(results_450)
-    # print(tables)
-    # table = tree.xpath('//table')[1]
+def riderListFind():
+    s = mf_auth()
+    r = s.get(mf_riderListsURL)
+    soup = BeautifulSoup(r.text, 'lxml')
+    urls = soup.find_all(href=re.compile('pick-rider'))
+    riderURL_450s = urls[0]['href']
+    riderURL_250s = urls[1]['href']
+    return riderURL_450s, riderURL_250s
 
 
 def get_race_info():
@@ -122,7 +112,6 @@ def get_race_info():
     # motoClass = raceInfo.split(' ', 1)[0]
     raceLocation = info["T"]  # Race location/name - 'Washougal'
     raceDesc = raceInfo + ' at ' + raceLocation
-    print(raceDesc)
     return raceDesc
 
 
@@ -132,6 +121,9 @@ def live_timing_xml_parse():
     lt_keys = ['num', 'name', 'laps', 'gap', 'diff', 'lastlap', 'bestlap',
                'status', 'seg1', 'seg2', 'seg3', 'seg4']
     lt_values = []
+    lt_info = {'seg4': '@S4', 'gap': '@G', 'seg3': '@S3', 'num': '@N',
+               'laps': '@L', 'name': '@F', 'lastlap': '@LL', 'seg2': '@S2',
+               'diff': '@D', 'bestlap': '@BL', 'seg1': '@S1', 'status': '@S'}
     tree = etree.parse(liveTimingURL)
     for i in range(len(lt_attrs)):
         value = tree.xpath('//A/B/' + lt_attrs[i])
@@ -168,24 +160,15 @@ def live_timing_update():
     df_liveTiming.to_excel(writer, 'liveTimingData')
     writer.save()
 
-    # Select the relevant elements for table
-    # keyLetters = ['A', 'F', 'N', 'L', 'G',
-    #               'D', 'LL', 'BL', 'S']
-    # keyValues = ['pos', 'name', 'num', 'laps', 'gap',
-    #              'diff', 'lastlap', 'bestlap', 'status']
+divs = [450, 250]
+for i in range(len(divs)):
+    results = mf_scrape(mf_ResultsURL, i)
+    results.split('/', 1)
+    print(results)
 
-    # Output the results
-    # if df_liveTiming.empty:
-    #     Range('liveTimingData', 'A1').value = "Error in data collection"
-    # else:
-    #     Range('liveTimingData', 'A1').options(
-    # index=True).value = df_liveTiming
-    # return df_liveTiming
-
-
-# mf_scrape()
+print(get_race_info())
 # get_race_info()
-live_timing_xml_parse()
+# live_timing_xml_parse()
 # live_timing_update()
 
 # if __name__ == '__main__':
