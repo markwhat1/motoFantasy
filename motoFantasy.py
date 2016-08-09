@@ -1,10 +1,11 @@
-from bs4 import BeautifulSoup
+import pprint as pp
+import re
 from collections import OrderedDict
 
 import pandas as pd
-import re
 import requests
 import xmltodict
+from bs4 import BeautifulSoup
 from lxml import etree, html
 from lxml.cssselect import CSSSelector
 
@@ -13,21 +14,132 @@ sxSeason = False
 ##################
 
 # Points Lists
-points_sx = [25, 22, 20, 18, 16, 15, 14, 13, 12, 11,  # 1-10
-             10, 9, 8, 7, 6, 5, 4, 3, 2, 1,           # 11-20
-             1, 1]                                    # 21-22
-points_mx = [25, 22, 20, 18, 16, 15, 14, 13, 12, 11,  # 1-10
-             10, 9, 8, 7, 6, 5, 4, 3, 2, 1,           # 11-20
-             0, 0, 0, 0, 0, 0, 0, 0, 0, 0,            # 21-30
-             0, 0, 0, 0, 0, 0, 0, 0, 0, 0]            # 31-40
-udogPoints_sx = [50, 44, 40, 36, 32, 30, 28, 26, 24, 22,  # 1-10, 2x
-                 10, 9, 8, 7, 6, 5, 4, 3, 2, 1,           # 11-20
-                 1, 1]                                    # 21-22
-udogPoints_mx = [50, 44, 40, 36, 32, 30, 28, 26, 24, 22,  # 1-10, 2x
-                 10, 9, 8, 7, 6, 5, 4, 3, 2, 1,           # 11-20
-                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,            # 21-30
-                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]            # 31-40
+points_sx = [25,
+             22,
+             20,
+             18,
+             16,
+             15,
+             14,
+             13,
+             12,
+             11,  # 1-10
+             10,
+             9,
+             8,
+             7,
+             6,
+             5,
+             4,
+             3,
+             2,
+             1,  # 11-20
+             1,
+             1]  # 21-22
+points_mx = [25,
+             22,
+             20,
+             18,
+             16,
+             15,
+             14,
+             13,
+             12,
+             11,  # 1-10
+             10,
+             9,
+             8,
+             7,
+             6,
+             5,
+             4,
+             3,
+             2,
+             1,  # 11-20
+             0,
+             0,
+             0,
+             0,
+             0,
+             0,
+             0,
+             0,
+             0,
+             0,  # 21-30
+             0,
+             0,
+             0,
+             0,
+             0,
+             0,
+             0,
+             0,
+             0,
+             0]  # 31-40
+udogPoints_sx = [50,
+                 44,
+                 40,
+                 36,
+                 32,
+                 30,
+                 28,
+                 26,
+                 24,
+                 22,  # 1-10, 2x
+                 10,
+                 9,
+                 8,
+                 7,
+                 6,
+                 5,
+                 4,
+                 3,
+                 2,
+                 1,  # 11-20
+                 1,
+                 1]  # 21-22
+udogPoints_mx = [50,
+                 44,
+                 40,
+                 36,
+                 32,
+                 30,
+                 28,
+                 26,
+                 24,
+                 22,  # 1-10, 2x
+                 10,
+                 9,
+                 8,
+                 7,
+                 6,
+                 5,
+                 4,
+                 3,
+                 2,
+                 1,  # 11-20
+                 0,
+                 0,
+                 0,
+                 0,
+                 0,
+                 0,
+                 0,
+                 0,
+                 0,
+                 0,  # 21-30
+                 0,
+                 0,
+                 0,
+                 0,
+                 0,
+                 0,
+                 0,
+                 0,
+                 0,
+                 0]  # 31-40
 
+list2 = udogPoints_mx()
 # Live Timing URLS
 baseurl_sx = 'http://live.amasupercross.com/xml/sx/'
 baseurl_mx = 'http://americanmotocrosslive.com/xml/mx/'
@@ -42,11 +154,11 @@ mf_riderListsURL = 'https://www.motocrossfantasy.com/user/team-status'
 if sxSeason is True:
     points, udogPoints = points_sx, udogPoints_sx
     infoUrl = baseurl_sx + raceInfoUrl
-    iveTimingURL = baseurl_sx + raceResultsUrl
+    liveTimingURL = baseurl_sx + raceResultsUrl
 elif sxSeason is False:  # i.e. it is MX season
     points, udogPoints = points_mx, udogPoints_mx
     infoUrl = baseurl_mx + raceInfoUrl
-    iveTimingURL = baseurl_mx + raceResultsUrl
+    liveTimingURL = baseurl_mx + raceResultsUrl
 else:
     print('...What season is it?')
 
@@ -95,6 +207,7 @@ def mf_scrape(url, division):
     df.columns = headers
     return df
 
+
 def riderListFind():
     s = mf_auth()
     r = s.get(mf_riderListsURL)
@@ -116,60 +229,91 @@ def get_race_info():
 
 
 def live_timing_xml_parse():
-    lt_attrs = ['@N', '@F', '@L', '@G', '@D', '@LL', '@BL',
-                '@S', '@S1', '@S2', '@S3', '@S4']
-    lt_keys = ['num', 'name', 'laps', 'gap', 'diff', 'lastlap', 'bestlap',
-               'status', 'seg1', 'seg2', 'seg3', 'seg4']
-    lt_values = []
-    lt_info = {'seg4': '@S4', 'gap': '@G', 'seg3': '@S3', 'num': '@N',
-               'laps': '@L', 'name': '@F', 'lastlap': '@LL', 'seg2': '@S2',
-               'diff': '@D', 'bestlap': '@BL', 'seg1': '@S1', 'status': '@S'}
+    lt_keys = ['@N', '@F', '@L', '@G', '@D', '@LL', '@BL', '@S', '@S1', '@S2',
+               '@S3', '@S4']
+    lt_values = ['num', 'name', 'laps', 'gap', 'diff', 'lastlap', 'bestlap',
+                 'status', 'seg1', 'seg2', 'seg3', 'seg4']
+    pp.pprint(dict(zip(lt_keys, lt_values)))
+    lt_data = []
+    lt_dict = {'@BL': 'bestlap',
+               '@D': 'diff',
+               '@F': 'name',
+               '@G': 'gap',
+               '@L': 'laps',
+               '@LL': 'lastlap',
+               '@N': 'num',
+               '@S': 'status',
+               '@S1': 'seg1',
+               '@S2': 'seg2',
+               '@S3': 'seg3',
+               '@S4': 'seg4'}
     tree = etree.parse(liveTimingURL)
-    for i in range(len(lt_attrs)):
-        value = tree.xpath('//A/B/' + lt_attrs[i])
-        lt_values.append(value)
-    lt_dict = OrderedDict(zip(lt_keys, lt_values))
+    for i in range(len(lt_keys)):
+        value = tree.xpath('//A/B/' + lt_keys[i])
+        lt_data.append(value)
+
+    print(len(lt_values))
+    lt_dict = OrderedDict(zip(lt_values, lt_data))
     df_livetiming = pd.DataFrame(lt_dict, index=list(range(1, 41)))
     df_livetiming.index.name = 'pos'
     print(df_livetiming)
 
 
 def live_timing_update():
-    text = requests.get(liveTimingURL).text  # Get XML
-    dict_initial = xmltodict.parse(text, dict_constructor=dict)
-    dict_final = dict_initial['A']['B']
+    text = requests.get(liveTimingURL)  # Get XML
+    soup = BeautifulSoup(text.text, 'xml')
+    rows = soup.find_all('B')
+    print(rows)
+    pos = []
+    rider = []
+    for i in range(len(rows)):
+        pos = rows[i].find_all('A')
+        rider.append(pos)
+
+    print(rider)
+    print(soup)
+    # dict_initial = xmltodict.parse(text, dict_constructor=dict)
+    # dict_final = dict_initial['A']['B']
     correctOrder = ['@A', '@N', '@F', '@L', '@G', '@D', '@LL', '@BL', '@S',
                     '@S1', '@S2', '@S3', '@S4', '@C', '@H', '@I', '@IN', '@LS',
                     '@LT', '@MLT', '@MLTBy', '@MSTLT', '@MSTS1', '@MSTS2',
                     '@MSTS3', '@MSTS4', '@P', '@RM', '@T', '@V']
-    nameReplace = {'@A': 'pos', '@F': 'name', '@N': 'num',
-                   '@L': 'laps', '@G': 'gap', '@D': 'diff',
-                   '@LL': 'lastlap', '@BL': 'bestlap',
-                   '@S': 'status', '@S1': 'seg1', '@S2': 'seg2',
-                   '@S3': 'seg3', '@S4': 'seg4'}
+    nameReplace = {'@A': 'pos',
+                   '@F': 'name',
+                   '@N': 'num',
+                   '@L': 'laps',
+                   '@G': 'gap',
+                   '@D': 'diff',
+                   '@LL': 'lastlap',
+                   '@BL': 'bestlap',
+                   '@S': 'status',
+                   '@S1': 'seg1',
+                   '@S2': 'seg2',
+                   '@S3': 'seg3',
+                   '@S4': 'seg4'}
 
-    df_liveTiming = pd.DataFrame(dict_final, columns=correctOrder)
-    df_liveTiming = df_liveTiming.loc[:, '@A':'@S4']
-    df_liveTiming.rename(columns=nameReplace, inplace=True)
-    print(df_liveTiming)
-
-    # Write to Excel workbook
+    # df_liveTiming = pd.DataFrame(dict_final, columns=correctOrder)
+    # df_liveTiming = df_liveTiming.loc[:, '@A':'@S4']
+    # df_liveTiming.rename(columns=nameReplace, inplace=True)
+    # print(df_liveTiming)
+    #
+    # # Write to Excel workbook
     path = 'C:\\Users\\mwhatc\\Google Drive\\Spreadsheets\\fantasy motocross\\'
-    wb = 'motoFantasy.xlsx'
-    writer = pd.ExcelWriter(path + wb)
-    df_liveTiming.to_excel(writer, 'liveTimingData')
-    writer.save()
+    # wb = 'motoFantasy.xlsx'
+    # writer = pd.ExcelWriter(path + wb)
+    # df_liveTiming.to_excel(writer, 'liveTimingData')
+    # writer.save()
 
-divs = [450, 250]
-for i in range(len(divs)):
-    results = mf_scrape(mf_ResultsURL, i)
-    results.split('/', 1)
-    print(results)
+# divs = [450, 250]
+# for i in range(len(divs)):
+#     results = mf_scrape(mf_ResultsURL, i)
+#     results.split('/', 1)
+#     print(results)
+#
+# print(get_race_info())
 
-print(get_race_info())
 # get_race_info()
 # live_timing_xml_parse()
-# live_timing_update()
 
 # if __name__ == '__main__':
 #     # To run from Python, not needed when called from Excel.
@@ -180,3 +324,6 @@ print(get_race_info())
 #     motocross\\'
 #     Workbook.set_mock_caller(path + 'motoFantasy.xlsm')
 #     live_timing_update()
+
+
+live_timing_update()
