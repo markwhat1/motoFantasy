@@ -1,164 +1,45 @@
-import pprint as pp
 import re
 from collections import OrderedDict
 
 import pandas as pd
 import requests
-import xmltodict
 from bs4 import BeautifulSoup
-from lxml import etree, html
-from lxml.cssselect import CSSSelector
+from lxml import etree
 
 ##################
-sxSeason = False
+SX = False
 ##################
 
 # Points Lists
-points_sx = [25,
-             22,
-             20,
-             18,
-             16,
-             15,
-             14,
-             13,
-             12,
-             11,  # 1-10
-             10,
-             9,
-             8,
-             7,
-             6,
-             5,
-             4,
-             3,
-             2,
-             1,  # 11-20
-             1,
-             1]  # 21-22
-points_mx = [25,
-             22,
-             20,
-             18,
-             16,
-             15,
-             14,
-             13,
-             12,
-             11,  # 1-10
-             10,
-             9,
-             8,
-             7,
-             6,
-             5,
-             4,
-             3,
-             2,
-             1,  # 11-20
-             0,
-             0,
-             0,
-             0,
-             0,
-             0,
-             0,
-             0,
-             0,
-             0,  # 21-30
-             0,
-             0,
-             0,
-             0,
-             0,
-             0,
-             0,
-             0,
-             0,
-             0]  # 31-40
-udogPoints_sx = [50,
-                 44,
-                 40,
-                 36,
-                 32,
-                 30,
-                 28,
-                 26,
-                 24,
-                 22,  # 1-10, 2x
-                 10,
-                 9,
-                 8,
-                 7,
-                 6,
-                 5,
-                 4,
-                 3,
-                 2,
-                 1,  # 11-20
-                 1,
-                 1]  # 21-22
-udogPoints_mx = [50,
-                 44,
-                 40,
-                 36,
-                 32,
-                 30,
-                 28,
-                 26,
-                 24,
-                 22,  # 1-10, 2x
-                 10,
-                 9,
-                 8,
-                 7,
-                 6,
-                 5,
-                 4,
-                 3,
-                 2,
-                 1,  # 11-20
-                 0,
-                 0,
-                 0,
-                 0,
-                 0,
-                 0,
-                 0,
-                 0,
-                 0,
-                 0,  # 21-30
-                 0,
-                 0,
-                 0,
-                 0,
-                 0,
-                 0,
-                 0,
-                 0,
-                 0,
-                 0]  # 31-40
+ptsSX = [25, 22, 20, 18, 16, 15, 14, 13, 12, 11,  # 1-10
+         10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 1, 1]  # 11-22
+ptsMX = [25, 22, 20, 18, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3,
+         2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+top10x2 = [50, 44, 40, 36, 32, 30, 28, 26, 24, 22]
+udogPtsSX = [50, 44, 40, 36, 32, 30, 28, 26, 24, 22,
+             10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 1, 1]
+udogPtsMX = [50, 44, 40, 36, 32, 30, 28, 26, 24, 22, 10, 9, 8, 7, 6, 5, 4, 3,
+             2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
-list2 = udogPoints_mx()
-# Live Timing URLS
-baseurl_sx = 'http://live.amasupercross.com/xml/sx/'
-baseurl_mx = 'http://americanmotocrosslive.com/xml/mx/'
-raceInfoUrl = 'Announcements.json'
-raceResultsUrl = 'RaceResultsWeb.xml'
+ptsSXdict = dict(zip(range(1, 23), ptsSX))
+udogPtsSXdict = dict(zip(range(1, 23), top10x2 + ptsSX[10:]))
+ptsMXdict = dict(zip(range(1, 41), ptsMX))
+udogPtsMXdict = dict(zip(range(1, 41), top10x2 + ptsMX[10:]))
 
 # MotocrossFantasy.com URLS
-mf_URL = 'https://www.motocrossfantasy.com/'
-mf_ResultsURL = 'https://www.motocrossfantasy.com/user/race-results'
-mf_riderListsURL = 'https://www.motocrossfantasy.com/user/team-status'
+mfUrl_base = 'https://www.motocrossfantasy.com/'
+mfUrl_results = 'https://www.motocrossfantasy.com/user/race-results'
+mfUrl_list_source = 'https://www.motocrossfantasy.com/user/team-status'
 
-if sxSeason is True:
-    points, udogPoints = points_sx, udogPoints_sx
-    infoUrl = baseurl_sx + raceInfoUrl
-    liveTimingURL = baseurl_sx + raceResultsUrl
-elif sxSeason is False:  # i.e. it is MX season
-    points, udogPoints = points_mx, udogPoints_mx
-    infoUrl = baseurl_mx + raceInfoUrl
-    liveTimingURL = baseurl_mx + raceResultsUrl
+# Chooce URLS based on which season it is
+if SX:
+    points, udogPoints = ptsSX, udogPtsSX
+    infoUrl = 'http://live.amasupercross.com/xml/sx/Announcements.json'
+    liveTimingUrl = 'http://live.amasupercross.com/xml/sx/RaceResultsWeb.xml'
+elif not SX:  # i.e. it is MX season
+    points, udogPoints = ptsMX, udogPtsMX
+    infoUrl = 'http://americanmotocrosslive.com/xml/mx/Announcements.json'
+    liveTimingUrl = 'http://americanmotocrosslive.com/xml/mx/RaceResultsWeb.xml'
 else:
     print('...What season is it?')
 
@@ -171,9 +52,8 @@ def mf_auth():
         'login_password': password,
         'login': 'true'
     }
-
     s = requests.Session()
-    r = s.post(mf_URL, data=payload)
+    r = s.post(mfUrl_base, data=payload)
     return s
 
 
@@ -210,7 +90,7 @@ def mf_scrape(url, division):
 
 def riderListFind():
     s = mf_auth()
-    r = s.get(mf_riderListsURL)
+    r = s.get(mfUrl_list_source)
     soup = BeautifulSoup(r.text, 'lxml')
     urls = soup.find_all(href=re.compile('pick-rider'))
     riderURL_450s = urls[0]['href']
@@ -228,13 +108,9 @@ def get_race_info():
     return raceDesc
 
 
-def live_timing_xml_parse():
-    lt_keys = ['@N', '@F', '@L', '@G', '@D', '@LL', '@BL', '@S', '@S1', '@S2',
-               '@S3', '@S4']
-    lt_values = ['num', 'name', 'laps', 'gap', 'diff', 'lastlap', 'bestlap',
-                 'status', 'seg1', 'seg2', 'seg3', 'seg4']
-    pp.pprint(dict(zip(lt_keys, lt_values)))
-    lt_data = []
+def live_timing_parse():
+    lt_keys = ['@N', '@F', '@L', '@G', '@D', '@LL', '@BL', '@S']
+    lt_values = ['num', 'name', 'laps', 'gap', 'diff', 'lastlap', 'bestlap', 'status']
     lt_dict = {'@BL': 'bestlap',
                '@D': 'diff',
                '@F': 'name',
@@ -242,17 +118,14 @@ def live_timing_xml_parse():
                '@L': 'laps',
                '@LL': 'lastlap',
                '@N': 'num',
-               '@S': 'status',
-               '@S1': 'seg1',
-               '@S2': 'seg2',
-               '@S3': 'seg3',
-               '@S4': 'seg4'}
-    tree = etree.parse(liveTimingURL)
+               '@S': 'status'}
+
+    tree = etree.parse(liveTimingUrl)
+    lt_data = []
     for i in range(len(lt_keys)):
         value = tree.xpath('//A/B/' + lt_keys[i])
         lt_data.append(value)
 
-    print(len(lt_values))
     lt_dict = OrderedDict(zip(lt_values, lt_data))
     df_livetiming = pd.DataFrame(lt_dict, index=list(range(1, 41)))
     df_livetiming.index.name = 'pos'
@@ -260,7 +133,7 @@ def live_timing_xml_parse():
 
 
 def live_timing_update():
-    text = requests.get(liveTimingURL)  # Get XML
+    text = requests.get(liveTimingUrl)  # Get XML
     soup = BeautifulSoup(text.text, 'xml')
     rows = soup.find_all('B')
     print(rows)
@@ -298,22 +171,24 @@ def live_timing_update():
     # print(df_liveTiming)
     #
     # # Write to Excel workbook
-    path = 'C:\\Users\\mwhatc\\Google Drive\\Spreadsheets\\fantasy motocross\\'
+    # path = 'C:\\Users\\mwhatc\\Google Drive\\Spreadsheets\\fantasy motocross\\'
     # wb = 'motoFantasy.xlsx'
     # writer = pd.ExcelWriter(path + wb)
     # df_liveTiming.to_excel(writer, 'liveTimingData')
     # writer.save()
 
+
 # divs = [450, 250]
 # for i in range(len(divs)):
-#     results = mf_scrape(mf_ResultsURL, i)
+#     results = mf_scrape(mfUrl_results, i)
 #     results.split('/', 1)
 #     print(results)
 #
 # print(get_race_info())
 
 # get_race_info()
-# live_timing_xml_parse()
+# riderListFind()
+live_timing_parse()
 
 # if __name__ == '__main__':
 #     # To run from Python, not needed when called from Excel.
@@ -326,4 +201,5 @@ def live_timing_update():
 #     live_timing_update()
 
 
-live_timing_update()
+# live_timing_update()
+https: // paper.dropbox.com / doc / pharm - of - oral - medicine - FRsFoNjbhDkojFkpsdGgS  #:uid=830247410&h2=What-if-patient-has-a-penicill
