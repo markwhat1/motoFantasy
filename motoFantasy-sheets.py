@@ -1,14 +1,31 @@
+# import gspread
+import simplejson as json
 import re
 from collections import OrderedDict
-
+# from oauth2client.service_account import ServiceAccountCredentials
+# from df2gspread import df2gspread as d2g
+from pgsheets import Token, Client, Spreadsheet
+from twisted.internet import reactor, task
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 from lxml import etree
+import os
 
 ##################
 SX = False
 ##################
+
+timeout = 60.0
+
+# Google Sheets values
+gapps_id = '.apps.googleusercontent.com'
+client_id = '362995481251-uoktvff3b0304l2d21vsgktmn46as8ij' + gapps_id
+client_secret = 'sqCvf2ET787c6WSz5OT940-D'
+access_code = '4/fxzdz-nv0BFZmCqX8hfND_g2PKXuHYZQLoJH-18aO44'
+my_token = '1/rie3alfNdqs1z6OK47HtLOIka-3l5gy8KMpBPeNR7AU'
+sheet_key = '16EDA8Mqe2_ikVtYEMKEgIOyDY2wOjHqaUW5effp7ZJk'
+my_url = 'https://docs.google.com/spreadsheets/d/' + sheet_key
 
 # Points Lists
 ptsSX = [25, 22, 20, 18, 16, 15, 14, 13, 12, 11,  # 1-10
@@ -35,11 +52,11 @@ mfUrl_list_source = 'https://www.motocrossfantasy.com/user/team-status'
 if SX:
     points, udogPoints = ptsSX, udogPtsSX
     infoUrl = 'http://live.amasupercross.com/xml/sx/Announcements.json'
-    liveTimingUrl = 'http://live.amasupercross.com/xml/sx/RaceResultsWeb.xml'
+    liveUrl = 'http://live.amasupercross.com/xml/sx/RaceResultsWeb.xml'
 elif not SX:  # i.e. it is MX season
     points, udogPoints = ptsMX, udogPtsMX
     infoUrl = 'http://americanmotocrosslive.com/xml/mx/Announcements.json'
-    liveTimingUrl = 'http://americanmotocrosslive.com/xml/mx/RaceResultsWeb.xml'
+    liveUrl = 'http://americanmotocrosslive.com/xml/mx/RaceResultsWeb.xml'
 else:
     print('...What season is it?')
 
@@ -99,106 +116,78 @@ def riderListFind():
 
 
 def get_race_info():
+    info_list = []
     info = requests.get(infoUrl).json()
+
     raceInfo = info["S"].split(' (', 1)[0]  # '450 Class Moto #2'
-    # motoNum = raceInfo.split('#', 1)[1]
-    # motoClass = raceInfo.split(' ', 1)[0]
+    motoNum = raceInfo.split('#', 1)[1]
+    motoClass = raceInfo.split(' ', 1)[0]
     raceLocation = info["T"]  # Race location/name - 'Washougal'
     raceDesc = raceInfo + ' at ' + raceLocation
-    return raceDesc
+
+    info_list.append(raceDesc)
+    info_list.append(motoClass)
+    info_list.append(motoNum)
+
+    df_lt_info = pd.DataFrame(info_list)
+    return df_lt_info
 
 
 def live_timing_parse():
-    lt_keys = ['@N', '@F', '@L', '@G', '@D', '@LL', '@BL', '@S']
-    lt_values = ['num', 'name', 'laps', 'gap', 'diff', 'lastlap', 'bestlap', 'status']
-    lt_dict = {'@BL': 'bestlap',
+    lt_keys = ['@N', '@F', '@L', '@G',
+               '@D', '@LL', '@BL', '@S']
+    lt_values = ['num', 'name', 'laps', 'gap',
+                 'diff', 'last lap', 'best lap', 'status']
+    lt_dict = {'@BL': 'best lap',
                '@D': 'diff',
                '@F': 'name',
                '@G': 'gap',
                '@L': 'laps',
-               '@LL': 'lastlap',
+               '@LL': 'last lap',
                '@N': 'num',
                '@S': 'status'}
 
-    tree = etree.parse(liveTimingUrl)
+    tree = etree.parse(liveUrl)
     lt_data = []
     for i in range(len(lt_keys)):
         value = tree.xpath('//A/B/' + lt_keys[i])
         lt_data.append(value)
 
     lt_dict = OrderedDict(zip(lt_values, lt_data))
-    df_livetiming = pd.DataFrame(lt_dict, index=list(range(1, 41)))
-    df_livetiming.index.name = 'pos'
-    print(df_livetiming)
+    new_index = list(range(1, 41))
+    df_liveTiming = pd.DataFrame(lt_dict, index=new_index)
+    df_liveTiming.index.name = 'pos'
+    return df_liveTiming
 
 
-def live_timing_update():
-    text = requests.get(liveTimingUrl)  # Get XML
-    soup = BeautifulSoup(text.text, 'xml')
-    rows = soup.find_all('B')
-    print(rows)
-    pos = []
-    rider = []
-    for i in range(len(rows)):
-        pos = rows[i].find_all('A')
-        rider.append(pos)
+def gsheets_livetiming_update():
+    df_lt_info = get_race_info()
+    df_liveTiming = live_timing_parse()
+    c = Client(client_id, client_secret)
+    t = Token(c, my_token)
+    s = Spreadsheet(t, my_url)
+    wks_lt_info = s.getWorksheet('Live Timing Info')
+    wks_livetiming = s.getWorksheet('Live Timing')
+    wks_lt_info.setDataFrame(df_lt_info)
+    wks_livetiming.setDataFrame(df_liveTiming)
+    pass
 
-    print(rider)
-    print(soup)
-    # dict_initial = xmltodict.parse(text, dict_constructor=dict)
-    # dict_final = dict_initial['A']['B']
-    correctOrder = ['@A', '@N', '@F', '@L', '@G', '@D', '@LL', '@BL', '@S',
-                    '@S1', '@S2', '@S3', '@S4', '@C', '@H', '@I', '@IN', '@LS',
-                    '@LT', '@MLT', '@MLTBy', '@MSTLT', '@MSTS1', '@MSTS2',
-                    '@MSTS3', '@MSTS4', '@P', '@RM', '@T', '@V']
-    nameReplace = {'@A': 'pos',
-                   '@F': 'name',
-                   '@N': 'num',
-                   '@L': 'laps',
-                   '@G': 'gap',
-                   '@D': 'diff',
-                   '@LL': 'lastlap',
-                   '@BL': 'bestlap',
-                   '@S': 'status',
-                   '@S1': 'seg1',
-                   '@S2': 'seg2',
-                   '@S3': 'seg3',
-                   '@S4': 'seg4'}
+l = task.LoopingCall(gsheets_livetiming_update)
+l.start(timeout)
 
-    # df_liveTiming = pd.DataFrame(dict_final, columns=correctOrder)
-    # df_liveTiming = df_liveTiming.loc[:, '@A':'@S4']
-    # df_liveTiming.rename(columns=nameReplace, inplace=True)
-    # print(df_liveTiming)
-    #
-    # # Write to Excel workbook
-    # path = 'C:\\Users\\mwhatc\\Google Drive\\Spreadsheets\\fantasy motocross\\'
-    # wb = 'motoFantasy.xlsx'
-    # writer = pd.ExcelWriter(path + wb)
-    # df_liveTiming.to_excel(writer, 'liveTimingData')
-    # writer.save()
+reactor.run()
 
 
-# divs = [450, 250]
-# for i in range(len(divs)):
-#     results = mf_scrape(mfUrl_results, i)
-#     results.split('/', 1)
-#     print(results)
-#
-# print(get_race_info())
+# df_liveTiming = live_timing_parse()
+# spreadsheet = '16EDA8Mqe2_ikVtYEMKEgIOyDY2wOjHqaUW5effp7ZJk'
+# wks_name = 'Live Timing'
+# d2g.upload(df_liveTiming, spreadsheet, wks_name)
 
-# get_race_info()
-# riderListFind()
-live_timing_parse()
-
-# if __name__ == '__main__':
-#     # To run from Python, not needed when called from Excel.
-#     # Expects the Excel file next to this source file, adjust accordingly.
-#     path =
-#     os.path.abspath(os.path.join(os.path.dirname(__file__),'myfile.xlsm'))
-#     path = 'C:\\Users\\mwhatc\\Google Drive\\Spreadsheets\\fantasy
-#     motocross\\'
-#     Workbook.set_mock_caller(path + 'motoFantasy.xlsm')
-#     live_timing_update()
-
-
-# live_timing_update()
+# sh = gc.open("motoFantasy")
+# worksheet = sh.worksheet('Live Timing')
+# print(data)
+# worksheet.update_acell('D1', data)
+# num_lines, num_columns = data.shape
+# print(num_lines, num_columns)
+# worksheet = sh.worksheet("Live Timing")
+# worksheet.update_acell('B1', data)
