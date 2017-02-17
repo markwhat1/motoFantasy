@@ -6,6 +6,7 @@ import requests
 from bs4 import BeautifulSoup
 from lxml import etree
 import sqlite3
+import pygsheets
 
 ##################
 SX = True
@@ -131,8 +132,18 @@ def live_timing_parse():
     lt_dict = OrderedDict(zip(lt_values, lt_data))
     df_livetiming = pd.DataFrame(lt_dict, index=list(range(1, len(lt_data[0]) + 1)))
     df_livetiming.index.name = 'pos'
-    print(df_livetiming)
     return df_livetiming
+
+
+def live2gsheets():
+    gc = pygsheets.authorize()
+
+    # Open spreadsheet and then workseet
+    sh = gc.open('2017 fantasy supercross')
+    wks = sh.worksheet_by_title("liveTiming2")
+    df = live_timing_parse()
+    wks.set_dataframe(df, 'A1')
+    return
 
 
 def live_timing_update():
@@ -168,6 +179,8 @@ def live_timing_update():
                    '@S3': 'seg3',
                    '@S4': 'seg4'}
 
+
+
     # df_liveTiming = pd.DataFrame(dict_final, columns=correctOrder)
     # df_liveTiming = df_liveTiming.loc[:, '@A':'@S4']
     # df_liveTiming.rename(columns=nameReplace, inplace=True)
@@ -181,6 +194,8 @@ def live_timing_update():
     # writer.save()
 
 
+live2gsheets()
+
 # divs = [450, 250]
 # for i in range(len(divs)):
 #     results = mf_scrape(mfUrl_results, i)
@@ -191,13 +206,16 @@ def live_timing_update():
 
 # get_race_info()
 # riderListFind()
-df = live_timing_parse()
-conn = sqlite3.connect('sqlite:///liveTiming.db')
-c = conn.cursor()
 
-c.execute('''CREATE TABLE liveTiming
-             (pos value, trans text, symbol text, qty real, price real)''')
 
+# df = live_timing_parse()
+# conn = sqlite3.connect('liveTiming.db')
+# c = conn.cursor()
+#
+# df.to_sql("liveResults", conn, if_exists="append")
+#
+# df2 = pd.read_sql_query("select * from liveResults where pos <= 10", conn)
+# print(df2)
 
 # if __name__ == '__main__':
 #     # To run from Python, not needed when called from Excel.
