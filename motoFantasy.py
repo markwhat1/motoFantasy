@@ -5,9 +5,10 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 from lxml import etree
+import sqlite3
 
 ##################
-SX = False
+SX = True
 ##################
 
 # Points Lists
@@ -121,15 +122,17 @@ def live_timing_parse():
                '@S': 'status'}
 
     tree = etree.parse(liveTimingUrl)
+
     lt_data = []
     for i in range(len(lt_keys)):
         value = tree.xpath('//A/B/' + lt_keys[i])
         lt_data.append(value)
 
     lt_dict = OrderedDict(zip(lt_values, lt_data))
-    df_livetiming = pd.DataFrame(lt_dict, index=list(range(1, 41)))
+    df_livetiming = pd.DataFrame(lt_dict, index=list(range(1, len(lt_data[0]) + 1)))
     df_livetiming.index.name = 'pos'
     print(df_livetiming)
+    return df_livetiming
 
 
 def live_timing_update():
@@ -188,7 +191,13 @@ def live_timing_update():
 
 # get_race_info()
 # riderListFind()
-live_timing_parse()
+df = live_timing_parse()
+conn = sqlite3.connect('sqlite:///liveTiming.db')
+c = conn.cursor()
+
+c.execute('''CREATE TABLE liveTiming
+             (pos value, trans text, symbol text, qty real, price real)''')
+
 
 # if __name__ == '__main__':
 #     # To run from Python, not needed when called from Excel.
