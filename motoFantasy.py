@@ -1,12 +1,16 @@
 import re
+import mfauth
 from collections import OrderedDict
-
+import keyring
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 from lxml import etree
 import sqlite3
 import pygsheets
+
+# TODO Rearrange code in a master function along the lines of this site: http://stackoverflow.com/questions/26310467/python-requests-keep-session-between-function
+
 
 ##################
 SX = True
@@ -47,15 +51,15 @@ else:
 
 
 def mf_auth():
-    username = 'markwhat'
-    password = 'yamaha'
+    username = mfauth.login['username']
+    password = keyring.get_password("motocrossfantasy", username)
     payload = {
         'login_username': username,
         'login_password': password,
         'login': 'true'
     }
-    s = requests.Session()
-    s = s.post(mfUrl_base, data=payload)
+    session = requests.Session()
+    s = session.post(mfUrl_base, data=payload)
     return s
 
 
@@ -180,7 +184,6 @@ def live_timing_update():
                    '@S4': 'seg4'}
 
 
-
     # df_liveTiming = pd.DataFrame(dict_final, columns=correctOrder)
     # df_liveTiming = df_liveTiming.loc[:, '@A':'@S4']
     # df_liveTiming.rename(columns=nameReplace, inplace=True)
@@ -194,28 +197,31 @@ def live_timing_update():
     # writer.save()
 
 
-live2gsheets()
+# live2gsheets()
 
-# divs = [450, 250]
-# for i in range(len(divs)):
-#     results = mf_scrape(mfUrl_results, i)
-#     results.split('/', 1)
-#     print(results)
-#
-# print(get_race_info())
 
-# get_race_info()
+def fetch_rider_lists():
+    divs = [450, 250]
+    for i in range(len(divs)):
+        results = mf_scrape(mfUrl_results, i)
+        results.split('/', 1)
+        print(results)
+
+
+print(get_race_info())
+
+get_race_info()
 # riderListFind()
 
 
-# df = live_timing_parse()
-# conn = sqlite3.connect('liveTiming.db')
-# c = conn.cursor()
-#
-# df.to_sql("liveResults", conn, if_exists="append")
-#
-# df2 = pd.read_sql_query("select * from liveResults where pos <= 10", conn)
-# print(df2)
+df = live_timing_parse()
+conn = sqlite3.connect('liveTiming.db')
+c = conn.cursor()
+
+df.to_sql("liveResults", conn, if_exists="replace")
+
+df2 = pd.read_sql_query("select * from liveResults", conn)
+print(df2)
 
 # if __name__ == '__main__':
 #     # To run from Python, not needed when called from Excel.
