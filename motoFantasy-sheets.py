@@ -1,16 +1,18 @@
 # import gspread
-import simplejson as json
+import os
 import re
 from collections import OrderedDict
-# from oauth2client.service_account import ServiceAccountCredentials
-# from df2gspread import df2gspread as d2g
-from pgsheets import Token, Client, Spreadsheet
-from twisted.internet import reactor, task
+
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 from lxml import etree
-import os
+
+# from oauth2client.service_account import ServiceAccountCredentials
+import df2gspread as d2g
+import simplejson as json
+from pgsheets import Client, Spreadsheet, Token
+from twisted.internet import reactor, task
 
 ##################
 SX = False
@@ -28,9 +30,9 @@ sheet_key = '16EDA8Mqe2_ikVtYEMKEgIOyDY2wOjHqaUW5effp7ZJk'
 my_url = 'https://docs.google.com/spreadsheets/d/' + sheet_key
 
 # Points Lists
-ptsSX = [25, 22, 20, 18, 16, 15, 14, 13, 12, 11,  # 1-10
+pts_sx = [25, 22, 20, 18, 16, 15, 14, 13, 12, 11,  # 1-10
          10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 1, 1]  # 11-22
-ptsMX = [25, 22, 20, 18, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3,
+ptsMX = [25,  22, 20, 18, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3,
          2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 top10x2 = [50, 44, 40, 36, 32, 30, 28, 26, 24, 22]
 udogPtsSX = [50, 44, 40, 36, 32, 30, 28, 26, 24, 22,
@@ -99,10 +101,10 @@ def mf_scrape(url, division):
             if len(cols) > 0:
                 data[i].append(cols[i].text)
 
-    df = pd.DataFrame(data)
-    df = df.transpose()
-    df.columns = headers
-    return df
+    dataframe = pd.DataFrame(data)
+    dataframe = dataframe.transpose()
+    dataframe.columns = headers
+    return dataframe
 
 
 def riderListFind():

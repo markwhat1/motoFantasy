@@ -1,13 +1,15 @@
 import re
-import mfauth
+import sqlite3
 from collections import OrderedDict
+
 import keyring
 import pandas as pd
+import pygsheets
 import requests
 from bs4 import BeautifulSoup
 from lxml import etree
-import sqlite3
-import pygsheets
+
+import mfauth
 
 # TODO Rearrange code in a master function along the lines of this site: http://stackoverflow.com/questions/26310467/python-requests-keep-session-between-function
 
