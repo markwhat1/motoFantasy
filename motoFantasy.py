@@ -110,10 +110,28 @@ def mf_rider_tables_update():
         d[i] = d[i].transpose()
         d[i].insert(0, 'Class', division)
 
+    # Combine DataFrames into one table for processing
     df_riderlists = d[0].append(d[1], ignore_index=True)
+    
+    # Drop first blank column
     df_riderlists.drop(df_riderlists.columns[1], axis=1, inplace=True)
+
+    # Rename columns to logical headers
     cols = ['Class', 'Name', 'HC', 'LF', 'UD']
     df_riderlists.columns = cols
+
+    # Remove multiple spaces and replace with a single space
+    df_riderlists['Name'] = df_riderlists['Name'].str.replace('\s+', ' ')
+
+    # Reformat names from "First Last" to "Last, F."
+    splits = df_riderlists['Name'].str.split(' ')
+    df_riderlists['last'] = splits.str[1]
+    df_riderlists['first'] = splits.str[0]
+    df_riderlists['first'] = df_riderlists['first'].str.slice(0, 1) + str('.')
+    df_riderlists['Name'] = df_riderlists['last'].str.cat(
+                                             df_riderlists['first'], sep=', ')
+    df_riderlists.pop('last')
+    df_riderlists.pop('first')
     print(df_riderlists)
 
     gc = pygsheets.authorize()
