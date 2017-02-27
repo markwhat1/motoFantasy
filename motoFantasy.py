@@ -19,20 +19,20 @@ SX = True
 ##################
 
 # Points Lists
-ptsSX = [25, 22, 20, 18, 16, 15, 14, 13, 12, 11,  # 1-10
+pts_sx = [25, 22, 20, 18, 16, 15, 14, 13, 12, 11,  # 1-10
          10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 1, 1]  # 11-22
-ptsMX = [25, 22, 20, 18, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3,
+pts_mx = [25, 22, 20, 18, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3,
          2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 top10x2 = [50, 44, 40, 36, 32, 30, 28, 26, 24, 22]
-udogPtsSX = [50, 44, 40, 36, 32, 30, 28, 26, 24, 22,
-             10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 1, 1]
-udogPtsMX = [50, 44, 40, 36, 32, 30, 28, 26, 24, 22, 10, 9, 8, 7, 6, 5, 4, 3,
-             2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+udog_pts_sx = [50, 44, 40, 36, 32, 30, 28, 26, 24, 22,
+               10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 1, 1]
+udog_pts_mx = [50, 44, 40, 36, 32, 30, 28, 26, 24, 22, 10, 9, 8, 7, 6, 5, 4, 3,
+               2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
-ptsSXdict = dict(zip(range(1, 23), ptsSX))
-udogPtsSXdict = dict(zip(range(1, 23), top10x2 + ptsSX[10:]))
-ptsMXdict = dict(zip(range(1, 41), ptsMX))
-udogPtsMXdict = dict(zip(range(1, 41), top10x2 + ptsMX[10:]))
+pts_sxdict = dict(zip(range(1, 23), pts_sx))
+udog_pts_sxdict = dict(zip(range(1, 23), top10x2 + pts_sx[10:]))
+pts_mxdict = dict(zip(range(1, 41), pts_mx))
+udog_pts_mxdict = dict(zip(range(1, 41), top10x2 + pts_mx[10:]))
 
 # MotocrossFantasy.com URLS
 mfUrl_base = 'https://www.motocrossfantasy.com/'
@@ -41,11 +41,11 @@ mfUrl_list_source = 'https://www.motocrossfantasy.com/user/team-status'
 
 # Chooce URLS based on which season it is
 if SX:
-    points, udogPoints = ptsSX, udogPtsSX
+    points, udogPoints = pts_sx, udog_pts_sx
     infoUrl = 'http://live.amasupercross.com/xml/sx/Announcements.json'
     liveTimingUrl = 'http://live.amasupercross.com/xml/sx/RaceResultsWeb.xml'
 elif not SX:  # i.e. it is MX season
-    points, udogPoints = ptsMX, udogPtsMX
+    points, udogPoints = pts_mx, udog_pts_mx
     infoUrl = 'http://americanmotocrosslive.com/xml/mx/Announcements.json'
     liveTimingUrl = 'http://americanmotocrosslive.com/xml/mx/RaceResultsWeb.xml'
 else:
