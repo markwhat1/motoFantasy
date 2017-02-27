@@ -9,7 +9,6 @@ import requests
 from bs4 import BeautifulSoup
 from lxml import etree
 
-import mfauth
 
 # TODO Rearrange code in a master function along the lines of this site: http://stackoverflow.com/questions/26310467/python-requests-keep-session-between-function
 
@@ -20,9 +19,9 @@ SX = True
 
 # Points Lists
 pts_sx = [25, 22, 20, 18, 16, 15, 14, 13, 12, 11,  # 1-10
-         10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 1, 1]  # 11-22
+          10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 1, 1]     # 11-22
 pts_mx = [25, 22, 20, 18, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3,
-         2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+          2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 top10x2 = [50, 44, 40, 36, 32, 30, 28, 26, 24, 22]
 udog_pts_sx = [50, 44, 40, 36, 32, 30, 28, 26, 24, 22,
                10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 1, 1]
@@ -37,7 +36,7 @@ udog_pts_mxdict = dict(zip(range(1, 41), top10x2 + pts_mx[10:]))
 # MotocrossFantasy.com URLS
 mfUrl_base = 'https://www.motocrossfantasy.com/'
 mfUrl_results = 'https://www.motocrossfantasy.com/user/race-results'
-mfUrl_list_source = 'https://www.motocrossfantasy.com/user/team-status'
+
 
 # Chooce URLS based on which season it is
 if SX:
@@ -53,7 +52,11 @@ else:
 
 
 def mf_auth():
-    username = mfauth.login['username']
+    """
+    Returns an authenticated ession with at 'motocrossfantasy.com'.
+    Password is fetched from Windows Credentials Vault.
+    """
+    username = 'markwhat'
     password = keyring.get_password("motocrossfantasy", username)
     payload = {
         'login_username': username,
@@ -62,55 +65,71 @@ def mf_auth():
     }
     session = requests.Session()
     s = session.post(mfUrl_base, data=payload)
-    return s
+    return session
 
 
-def mf_scrape(url, division):
-    if division == 450:
-        index = 0
-    elif division == 250:
-        index = 1
-    else:
-        index = 0
+def mf_rider_tables_update():
+    """
+    Returns rider table list from 'motocrossfantasy.com'
+    division = 450 or 250 only
+    """
+    mfUrl_list_source = 'https://www.motocrossfantasy.com/user/team-status'
 
-    s = mf_auth()
-    r = s.get(url)
+    session = mf_auth()
+
+    r = session.get(mfUrl_list_source)
     soup = BeautifulSoup(r.text, 'lxml')
-    tables = soup.find_all('table')
-    mf_table = tables[index]
+    table_urls = soup.find_all(href=re.compile('pick-rider'))
+    tableURL_450 = table_urls[0]['href']
+    tableURL_250 = table_urls[1]['href']
 
-    heads = mf_table.find_all('th')
-    headers = [th.text for th in heads]
+    d = {}
+    for i in range(len(table_urls)):
+        if i == 0:
+            division = 450
+        elif i == 1:
+            division = 250
+        else:
+            print("No proper division found.")
 
-    data = [[] for i in range(len(headers))]
-    rows = mf_table.find_all('tr')
-    for row in rows:
-        cols = row.find_all('td')
-        for i in range(len(data)):
-            if len(cols) > 0:
-                data[i].append(cols[i].text)
+        doc = session.get(table_urls[i]['href'])
+        soup = BeautifulSoup(doc.text, 'lxml')
+        table = soup.find('table')
 
-    df = pd.DataFrame(data)
-    df = df.transpose()
-    df.columns = headers
-    return df
+        heads = table.find_all('th')
+        headers = [th.text for th in heads]
 
+        data = [[] for n in range(len(headers))]
+        rows = table.find_all('tr')
+        for row in rows:
+            cols = row.find_all('td')
+            for c in range(len(data)):
+                if len(cols) > 0:
+                    data[c].append(cols[c].text)
+        d[i] = pd.DataFrame(data)
+        d[i] = d[i].transpose()
+        d[i].insert(0, 'Class', division)
 
-def riderListFind():
-    s = mf_auth()
-    r = s.get(mfUrl_list_source)
-    soup = BeautifulSoup(r.text, 'lxml')
-    urls = soup.find_all(href=re.compile('pick-rider'))
-    riderURL_450s = urls[0]['href']
-    riderURL_250s = urls[1]['href']
-    return riderURL_450s, riderURL_250s
+    df_riderlists = d[0].append(d[1], ignore_index=True)
+    df_riderlists.drop(df_riderlists.columns[1], axis=1, inplace=True)
+    cols = ['Class', 'Name', 'HC', 'LF', 'UD']
+    df_riderlists.columns = cols
+    print(df_riderlists)
+
+    gc = pygsheets.authorize()
+
+    # Open spreadsheet and then workseet
+    sh = gc.open('2017 fantasy supercross')
+    wks = sh.worksheet_by_title("rider lists")
+    wks.set_dataframe(df_riderlists, 'A1')
+    return
 
 
 def get_race_info():
     info = requests.get(infoUrl).json()
     raceInfo = info["S"].split(' (', 1)[0]  # '450 Class Moto #2'
-    # motoNum = raceInfo.split('#', 1)[1]
-    # motoClass = raceInfo.split(' ', 1)[0]
+    motoNum = raceInfo.split('#', 1)[1]
+    motoClass = raceInfo.split(' ', 1)[0]
     raceLocation = info["T"]  # Race location/name - 'Washougal'
     raceDesc = raceInfo + ' at ' + raceLocation
     return raceDesc
@@ -199,23 +218,12 @@ def live_timing_update():
     # writer.save()
 
 
-# live2gsheets()
 
 
-def fetch_rider_lists():
-    divs = [450, 250]
-    for i in range(len(divs)):
-        results = mf_scrape(mfUrl_results, i)
-        results.split('/', 1)
-        print(results)
 
 
-print(get_race_info())
-
-get_race_info()
-# riderListFind()
-
-
+# Datebase beginning
+'''
 df = live_timing_parse()
 conn = sqlite3.connect('liveTiming.db')
 c = conn.cursor()
@@ -224,6 +232,8 @@ df.to_sql("liveResults", conn, if_exists="replace")
 
 df2 = pd.read_sql_query("select * from liveResults", conn)
 print(df2)
+'''
+mf_rider_tables_update()
 
 # if __name__ == '__main__':
 #     # To run from Python, not needed when called from Excel.
@@ -233,7 +243,3 @@ print(df2)
 #     path = 'C:\\Users\\mwhatc\\Google Drive\\Spreadsheets\\fantasy
 #     motocross\\'
 #     Workbook.set_mock_caller(path + 'motoFantasy.xlsm')
-#     live_timing_update()
-
-
-# live_timing_update()
