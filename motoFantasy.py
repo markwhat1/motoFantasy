@@ -11,6 +11,7 @@ from lxml import etree
 
 
 # TODO Rearrange code in a master function along the lines of this site: http://stackoverflow.com/questions/26310467/python-requests-keep-session-between-function
+[jjjj](URL)
 
 
 ##################
