@@ -9,24 +9,46 @@ import requests
 from bs4 import BeautifulSoup
 from lxml import etree
 
+
+# TODO Rearrange code in a master function along the lines of
+# this site: http://stackoverflow.com/questions/26310467/python-requests-keep-session-between-function
+
 ##################
 SX = True
 ##################
 
-# MotocrossFantasy.com URLS
-mfUrl_base = 'https://www.motocrossfantasy.com/'
-mfUrl_results = 'https://www.motocrossfantasy.com/user/race-results'
-
-
 # Chooce URLS based on which season it is
 if SX:
-    infoUrl = 'http://live.amasupercross.com/xml/sx/Announcements.json'
-    liveTimingUrl = 'http://live.amasupercross.com/xml/sx/RaceResultsWeb.xml'
-elif not SX:  # i.e. it is MX season
-    infoUrl = 'http://americanmotocrosslive.com/xml/mx/Announcements.json'
-    liveTimingUrl = 'http://americanmotocrosslive.com/xml/mx/RaceResultsWeb.xml'
+    series = 'sx'
+elif not SX:  # i.e. it is motocross season
+    series = 'mx'
 else:
-    print('...What season is it?')
+    print('... What season is it?')
+
+# Race data URLs
+resultsUrl_base = 'http://americanmotocrosslive.com/xml/'
+infoUrl = resultsUrl_base + series + '/Announcements.json'
+liveTimingUrl = resultsUrl_base + series + '/RaceResults.json'
+# MotocrossFantasy.com URLS
+mfUrl_base = 'https://www.motocrossfantasy.com'
+mfUrl_results = mfUrl_base + '/user/race-results'
+
+
+def mf_auth():
+    """
+    Returns an authenticated session with 'motocrossfantasy.com'.
+    Password is fetched from Windows Credentials Vault.
+    """
+    username = 'markwhat'
+    password = keyring.get_password("motocrossfantasy", username)
+    payload = {
+        'login_username': username,
+        'login_password': password,
+        'login': 'true'
+    }
+    session = requests.Session()
+    s = session.post(mfUrl_base, data=payload)
+    return session
 
 
 def get_rider_pts(pos, handicap, udog):
@@ -59,23 +81,6 @@ def get_rider_pts(pos, handicap, udog):
         hc_pos = 1
     else:
         hc_pos = handicap - pos
-
-
-def mf_auth():
-    """
-    Returns an authenticated ession with at 'motocrossfantasy.com'.
-    Password is fetched from Windows Credentials Vault.
-    """
-    username = 'markwhat'
-    password = keyring.get_password("motocrossfantasy", username)
-    payload = {
-        'login_username': username,
-        'login_password': password,
-        'login': 'true'
-    }
-    session = requests.Session()
-    s = session.post(mfUrl_base, data=payload)
-    return session
 
 
 def mf_rider_tables_update():
@@ -252,3 +257,11 @@ mf_rider_tables_update()
 
 if __name__ == '__main__':
     live2gsheets()
+# if __name__ == '__main__':
+#     # To run from Python, not needed when called from Excel.
+#     # Expects the Excel file next to this source file, adjust accordingly.
+#     path =
+#     os.path.abspath(os.path.join(os.path.dirname(__file__),'myfile.xlsm'))
+#     path = 'C:\\Users\\mwhatc\\Google Drive\\Spreadsheets\\fantasy
+#     motocross\\'
+#     Workbook.set_mock_caller(path + 'motoFantasy.xlsm')
