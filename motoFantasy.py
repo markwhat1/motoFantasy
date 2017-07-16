@@ -51,7 +51,7 @@ def season(series='SX'):
     pts_dict = values.pts_dict[list_item]
     pts_dict_udog = values.pts_dict_udog[list_item]
 
-    return [info_url, live_url, pts, pts_udog, pts_dict, pts_dict_udog]
+    return [live_url, pts, pts_udog, pts_dict, pts_dict_udog]
 
 
 def mf_auth():
@@ -182,8 +182,23 @@ def live_timing_json():
         livetiming['B'], index='A', columns=list(column_dict.keys()))
     df_livetiming.rename(columns=column_dict, inplace=True)
     df_livetiming.index.name = 'pos'
-    # print(df.head())
+
+    df_livetiming['name'] = format_name(df_livetiming['name'])
     return df_livetiming
+
+
+def format_name(df_column):
+    series = pd.Series(df_column)
+    df = series.to_frame(name='name')
+    splits = df['name'].str.split(' ')
+    df['last'] = splits.str[1]
+    df['first'] = splits.str[0]
+    df['first'] = df['first'].str.slice(0, 1) + str('.')
+    df['name'] = df['last'].str.cat(
+    df['first'], sep=', ')
+    df.pop('last')
+    df.pop('first')
+    return df
 
 
 def live2gsheets():
@@ -198,9 +213,9 @@ def live2gsheets():
 
 
 my_variables = season('MX')
-info_url, live_url = my_variables[0:2]
-pts, pts_udog = my_variables[2:4]
-pts_dict, pts_dict_udog = my_variables[4:]
+live_url = my_variables[0]
+pts, pts_udog = my_variables[1:3]
+pts_dict, pts_dict_udog = my_variables[3:]
 
 
 # Datebase beginning
@@ -217,5 +232,9 @@ print(df2)
 
 
 if __name__ == '__main__':
-    print(live_timing_json().head())
-    print(get_race_info())
+    df_livetiming = live_timing_json()
+    print(df_livetiming)
+    # column = df_livetiming.loc[:, 'name']
+    # print(type(column))
+    # format_name(column)
+    # print(get_race_info())
