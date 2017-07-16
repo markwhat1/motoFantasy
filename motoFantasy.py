@@ -195,7 +195,7 @@ def format_name(df_column):
     df['first'] = splits.str[0]
     df['first'] = df['first'].str.slice(0, 1) + str('.')
     df['name'] = df['last'].str.cat(
-    df['first'], sep=', ')
+        df['first'], sep=', ')
     df.pop('last')
     df.pop('first')
     return df
