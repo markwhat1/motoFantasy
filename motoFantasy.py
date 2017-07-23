@@ -29,14 +29,18 @@ raceid_250 = first_raceid + (round * 2 - 1)
 
 mfUrl_base = 'https://www.motocrossfantasy.com/user/'
 mfUrl_status = mfUrl_base + 'team-status'
-mfUrl_choose450s = mfUrl_base + 'pick-riders/2017-MX/' + \
-    leagueID + '/' + str(raceid_450)
-mfUrl_choose250s = mfUrl_base + 'pick-riders/2017-MX/' + \
-    leagueID + '/' + str(raceid_250)
 mfUrl_teamstandings = mfUrl_base + 'bench-racing-divisions/' + leagueID
 mfUrl_weekstandings = mfUrl_base + 'weekly-standings/' + leagueID
 mfUrl_raceresults = mfUrl_base + 'race-results'
 mfUrl_toppicks = mfUrl_base + 'top-picks/2017-MX'
+
+
+def mfUrl_choose_riders(level):
+    '''
+    Level should be an integer value of 450 or 250
+    '''
+    mfUrl_choose = mfUrl_base + 'pick-riders/2017-MX/' + str(leagueID) + '/'
+    return mfUrl_choose + str(level)
 
 
 def season(series='SX'):
