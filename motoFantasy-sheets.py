@@ -10,7 +10,7 @@ from lxml import etree
 
 # from oauth2client.service_account import ServiceAccountCredentials
 import df2gspread as d2g
-import simplejson as json
+import json
 from pgsheets import Client, Spreadsheet, Token
 from twisted.internet import reactor, task
 
