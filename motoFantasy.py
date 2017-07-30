@@ -6,7 +6,6 @@ import pandas as pd
 import pygsheets
 import requests
 from bs4 import BeautifulSoup
-from gspread_pandas import Spread
 
 import values
 
