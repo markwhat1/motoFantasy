@@ -1,90 +1,113 @@
-import datetime
 import json
-import os
-import pickle
 import re
-import sqlite3
-from collections import OrderedDict
-from urllib.parse import urlparse
 
 import keyring
 import pandas as pd
 import pygsheets
 import requests
 from bs4 import BeautifulSoup
-from lxml import etree
+from gspread_pandas import Spread
 
 import values
 
-# TODO Rearrange code in a master function along the lines of
-# this site:
-# http://stackoverflow.com/questions/26310467/python-requests-keep-session-between-function
+# MotocrossFantasy.com variables and URLs
+leagueID = 4370
+event = 8
+first_race_id = 437
+race_id_450 = first_race_id + (event * 2 - 2)
+race_id_250 = first_race_id + (event * 2 - 1)
 
-# MotocrossFantasy.com URL constructions
-leagueID = '4370'
-first_raceid = 437
-round = 8
-raceid_450 = first_raceid + (round * 2 - 2)
-raceid_250 = first_raceid + (round * 2 - 1)
-
-mfUrl_base = 'https://www.motocrossfantasy.com/user/'
-mfUrl_status = mfUrl_base + 'team-status'
-mfUrl_teamstandings = mfUrl_base + 'bench-racing-divisions/' + leagueID
-mfUrl_weekstandings = mfUrl_base + 'weekly-standings/' + leagueID
-mfUrl_raceresults = mfUrl_base + 'race-results'
-mfUrl_toppicks = mfUrl_base + 'top-picks/2017-MX'
+mf_url_base = 'https://www.motocrossfantasy.com/user/'
+mf_url_status = mf_url_base + 'team-status'
+mf_url_team_standings = mf_url_base + 'bench-racing-divisions/' + str(leagueID)
+mf_url_week_standings = mf_url_base + 'weekly-standings/' + str(leagueID)
+mf_url_race_results = mf_url_base + 'race-results'
+mf_url_top_picks = mf_url_base + 'top-picks/2017-MX'
 
 
-def mfUrl_choose_riders(level):
-    '''
-    Level should be an integer value of 450 or 250
-    '''
-    mfUrl_choose = mfUrl_base + 'pick-riders/2017-MX/' + str(leagueID) + '/'
-    return mfUrl_choose + str(level)
+def mf_master():
+    ses = requests.session()
+
+    # we're now going to use the session in 3 different function calls
+    mf_auth(ses)
+    df_riders = mf_rider_tables(ses)
+
+    # once this function ends we either need to pass the session up to the
+    # calling function or it will be gone forever
+    return df_riders
 
 
-def season(series='SX'):
-    if series == 'MX':
-        list_item = 0
-    elif series == 'SX':
-        list_item = 1
+def mf_auth(session):
+    """
+    Returns an authenticated session with 'motocrossfantasy.com'.
+    Password is fetched from Windows Credentials Vault.
+    """
+    username = 'markwhat'
+    password = keyring.get_password("motocrossfantasy", username)
+    payload = {
+        'login_username': username,
+        'login_password': password,
+        'login': 'true'
+    }
+    session.post(mf_url_base, data=payload)
+
+
+def mf_find_table_urls(ses):
+    """
+    Returns rider table list from 'motocrossfantasy.com'
+    division = 450 or 250 only
+    """
+    html = ses.get(mf_url_status).content
+    soup = BeautifulSoup(html, 'lxml')
+
+    table_urls = []
+    for link in soup.find_all('a', href=re.compile('pick-riders')):
+        table_urls.append(link['href'])
+
+    divisions = [250, 450]
+    div_dict = {k: v for (k, v) in zip(divisions, table_urls)}
+    return div_dict
+
+
+def mf_rider_tables(ses):
+    rider_urls = mf_find_table_urls(ses)
+
+    rider_lists = []
+    for div in rider_urls.keys():
+        html = ses.get(rider_urls.get(div)).content
+        soup = BeautifulSoup(html, 'lxml')
+        table = soup.find('table')
+
+        # Use prettify() to feed html into pandas
+        rider_tables = pd.read_html(table.prettify(), flavor='bs4')
+
+        # Print number of tables found
+        print(str(len(rider_tables)) + " " + str(div) + " class " + " table(s) was found!")
+
+        # read_html returns list of DataFrames, only need first one
+        df_table = rider_tables[0]
+
+        # Add Class column to beginning of DataFrame
+        df_table.insert(0, "Class", int(div), allow_duplicates=True)
+
+        # Merge rider lists
+        rider_lists.append(df_table)
+
+    # Combine DataFrames into one table for processing
+    df_riders = pd.concat(rider_lists, ignore_index=True)
+
+    # Drop blank column in position [1]; axis=1 means columns
+    df_riders.drop(df_riders.columns[1], axis=1, inplace=True)
+
+    # Rename columns to logical headers
+    cols = ['Class', 'Name', 'HC', 'LF', 'UD']
+
+    if len(df_riders.columns) == 5:
+        df_riders.columns = cols
+        df_riders['Name'] = format_name(df_riders['Name'])
     else:
-        print('... What season is it?')
-
-    live_url = 'http://americanmotocrosslive.com/xml/' + series + '/RaceResults.json'
-
-    pts = values.pts[list_item]
-    pts_udog = values.pts_udog[list_item]
-    pts_dict = values.pts_dict[list_item]
-    pts_dict_udog = values.pts_dict_udog[list_item]
-
-    return [live_url, pts, pts_udog, pts_dict, pts_dict_udog]
-
-
-def get_race_info():
-    info = requests.get(live_url).json()
-
-    location = info['T']  # Race location/name - 'Washougal'
-    moto = info['S'].split(' (', 1)[0]  # '450 Class Moto #2'
-    motoClass = moto.split(' ', 1)[0]
-
-    race_info = location + ': ' + moto
-    return race_info
-
-
-def live_timing_json():
-    r = requests.get(live_url)
-    livetiming = json.loads(r.text)
-    column_dict = {'A': 'pos', 'N': 'num', 'F': 'name', 'L': 'laps', 'G': 'gap',
-                   'D': 'diff', 'BL': 'bestlap', 'LL': 'lastlap', 'S': 'status'}
-
-    df_livetiming = pd.DataFrame.from_records(
-        livetiming['B'], index='A', columns=list(column_dict.keys()))
-    df_livetiming.rename(columns=column_dict, inplace=True)
-    df_livetiming.index.name = 'pos'
-
-    df_livetiming['name'] = format_name(df_livetiming['name'])
-    return df_livetiming
+        print("Rider columns could not be found.")
+    return df_riders
 
 
 def format_name(df_column):
@@ -98,25 +121,56 @@ def format_name(df_column):
     df = df.loc[:, 'name']
     return df
 
-class mxfantasy:
-    def __init__(self, session):
-        self.session = session
 
-    def mf_auth(session):
-        """
-        Returns an authenticated session with 'motocrossfantasy.com'.
-        Password is fetched from Windows Credentials Vault.
-        """
-        username = 'markwhat'
-        password = keyring.get_password("motocrossfantasy", username)
-        payload = {
-            'login_username': username,
-            'login_password': password,
-            'login': 'true'
-        }
-        session = requests.Session()
-        s = session.post(mfUrl_base, data=payload)
-        return session
+def live_timing_to_sheets(series='MX'):
+    r = requests.get(live_url)
+    live_timing = json.loads(r.text)
+
+    column_names = {'A': 'pos', 'F': 'name', 'N': 'num', 'L': 'laps', 'G': 'gap',
+                    'D': 'diff', 'BL': 'bestlap', 'LL': 'lastlap', 'S': 'status'}
+
+    df_live_timing = pd.DataFrame.from_records(
+        live_timing['B'], columns=list(column_names.keys()))
+    df_live_timing.rename(columns=column_names, inplace=True)
+    df_live_timing['name'] = format_name(df_live_timing['name'])
+
+    # Assemble current race information
+    status = live_timing['A']
+    location = live_timing['T']  # Race location/name - 'Washougal'
+    long_moto_name = live_timing['S'].split(' (', 1)[0] # '450 Class Moto #2'
+    short_moto_name = long_moto_name.split('Class ', 1)[1]
+    division = long_moto_name.split('Class ', 1)[0]
+
+    gc = pygsheets.authorize(no_cache=True)
+
+    # Open spreadsheet and then worksheet
+    sh = gc.open('2017 fantasy supercross')
+    wks = sh.worksheet_by_title('live timing')
+
+    # Updates to current race information
+    wks.update_cell('K2', series) # Series (MX or SX)
+    wks.update_cell('L2', location) # Location
+    wks.update_cell('M2', division) # Class
+    wks.update_cell('N2', short_moto_name) # Event
+    wks.set_dataframe(df_live_timing, (1, 1)) # Live timing table
+    return
+
+
+def season(series='SX'):
+    if series == 'MX':
+        series_value = 0
+    elif series == 'SX':
+        series_value = 1
+    else:
+        print('... What season is it?')
+
+    live_url = 'http://americanmotocrosslive.com/xml/' + series + '/RaceResults.json'
+
+    pts = values.pts[series_value]
+    pts_udog = values.pts_udog[series_value]
+    pts_dict = values.pts_dict[series_value]
+    pts_dict_udog = values.pts_dict_udog[series_value]
+    return [live_url, pts, pts_udog, pts_dict, pts_dict_udog]
 
 
 def get_rider_pts(pos, handicap, udog):
@@ -133,107 +187,6 @@ def get_rider_pts(pos, handicap, udog):
     return
 
 
-def mf_find_tables(text, division):
-    """
-    Returns rider table list from 'motocrossfantasy.com'
-    division = 450 or 250 only
-    """
-    # mfUrl_list_source = 'https://www.motocrossfantasy.com/user/team-status'
-
-    # session = mf_auth()
-
-    # r = session.get(mfUrl_list_source)
-    soup = BeautifulSoup(text, 'lxml')
-    table_urls = soup.find_all(href=re.compile('pick-rider'))
-    table_urls = list(table_urls)
-
-    for i in range(len(table_urls)):
-        # Set division based on table number
-        if i == 0:
-            division = 450
-        elif i == 1:
-            division = 250
-        else:
-            print("No proper division found.")
-    return table_urls
-
-
-def mf_rider_tables(link_list):
-
-    table_dict = {}
-
-
-
-    doc = r(table_urls[i]['href'])
-    soup = BeautifulSoup(doc.text, 'lxml')
-    table = soup.find('table')
-
-    heads = table.find_all('th')
-    headers = [th.text for th in heads]
-
-    data = [[] for n in range(len(headers))]
-    rows = table.find_all('tr')
-    for row in rows:
-        cols = row.find_all('td')
-        for c in range(len(data)):
-            if len(cols) > 0:
-                data[c].append(cols[c].text)
-
-    table_dict[i] = pd.DataFrame(data)
-    table_dict[i] = table_dict[i].transpose()
-    table_dict[i].insert(0, 'Class', division)
-
-    # Combine DataFrames into one table for processing
-    df_riderlists = d[0].append(d[1], ignore_index=True)
-
-    # Drop first blank column
-    df_riderlists.drop(df_riderlists.columns[1], axis=1, inplace=True)
-
-    # Rename columns to logical headers
-    cols = ['Class', 'Name', 'HC', 'LF', 'UD']
-    df_riderlists.columns = cols
-
-    # Remove multiple spaces and replace with a single space
-    df_riderlists['Name'] = df_riderlists['Name'].str.replace('\s+', ' ')
-
-    # Reformat names from "First Last" to "Last, F."
-    splits = df_riderlists['Name'].str.split(' ')
-    df_riderlists['last'] = splits.str[1]
-    df_riderlists['first'] = splits.str[0]
-    df_riderlists['first'] = df_riderlists['first'].str.slice(0, 1) + str('.')
-    df_riderlists['Name'] = df_riderlists['last'].str.cat(
-        df_riderlists['first'], sep=', ')
-    df_riderlists.pop('last')
-    df_riderlists.pop('first')
-    print(df_riderlists)
-
-    gc = pygsheets.authorize()
-
-    # Open spreadsheet and then workseet
-    sh = gc.open('2017 fantasy supercross')
-    wks = sh.worksheet_by_title("rider lists")
-    wks.set_dataframe(df_riderlists, 'A1')
-    return
-
-
-def live2gsheets():
-    gc = pygsheets.authorize()
-
-    # Open spreadsheet and then workseet
-    sh = gc.open('2017 fantasy supercross')
-    wks = sh.worksheet_by_title("liveTiming2")
-    df = live_timing_json()
-    wks.set_dataframe(df, 'A1')
-    return
-
-
-my_variables = season('MX')
-
-live_url = my_variables[0]
-pts, pts_udog = my_variables[1:3]
-pts_dict, pts_dict_udog = my_variables[3:]
-
-
 # Datebase beginning
 '''
 df = live_timing_parse()
@@ -246,137 +199,14 @@ df2 = pd.read_sql_query("select * from liveResults", conn)
 print(df2)
 '''
 
-class MxFantasy:
-    """
-    a class which handles and saves login sessions. It also keeps track of proxy settings.
-    It does also maintine a cache-file for restoring session data from earlier
-    script executions.
-    Source: https://stackoverflow.com/a/37118451
-    """
-    def __init__(self,
-                 loginUrl,
-                 loginData,
-                 loginTestUrl,
-                 loginTestString,
-                 sessionFileAppendix = '_session.dat',
-                 maxSessionTimeSeconds = 30 * 60,
-                 proxies = None,
-                 userAgent = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.1',
-                 debug = True):
-        """
-        save some information needed to login the session
-
-        you'll have to provide 'loginTestString' which will be looked for in the
-        responses html to make sure, you've properly been logged in
-
-        'proxies' is of format { 'https' : 'https://user:pass@server:port', 'http' : ...
-        'loginData' will be sent as post data (dictionary of id : value).
-        'maxSessionTimeSeconds' will be used to determine when to re-login.
-
-        """
-        urlData = urlparse(loginUrl)
-
-        self.proxies = proxies
-        self.loginData = loginData
-        self.loginUrl = loginUrl
-        self.loginTestUrl = loginTestUrl
-        self.maxSessionTime = maxSessionTimeSeconds
-        self.sessionFile = urlData.netloc + sessionFileAppendix
-        self.userAgent = userAgent
-        self.loginTestString = loginTestString
-        self.debug = debug
-
-        self.login()
-
-    def modification_date(self, filename):
-        """
-        return last file modification date as datetime object
-        """
-        t = os.path.getmtime(filename)
-        return datetime.datetime.fromtimestamp(t)
-
-    def login(self, forceLogin = False):
-        """
-        login to a session. Try to read last saved session from cache file. If this fails
-        do proper login. If the last cache access was too old, also perform a proper login.
-        Always updates session cache file.
-        """
-        wasReadFromCache = False
-        if self.debug:
-            print('loading or generating session...')
-        if os.path.exists(self.sessionFile) and not forceLogin:
-            time = self.modification_date(self.sessionFile)         
-
-            # only load if file less than 30 minutes old
-            lastModification = (datetime.datetime.now() - time).seconds
-            if lastModification < self.maxSessionTime:
-                with open(self.sessionFile, "rb") as f:
-                    self.session = pickle.load(f)
-                    wasReadFromCache = True
-                    if self.debug:
-                        print("loaded session from cache (last access %ds ago) "
-                              % lastModification)
-        if not wasReadFromCache:
-            self.session = requests.Session()
-            self.session.headers.update({'user-agent' : self.userAgent})
-            res = self.session.post(self.loginUrl, data = self.loginData, proxies = self.proxies)
-
-            if self.debug:
-                print('created new session with login' )
-            self.saveSessionToCache()
-
-        # test login
-        res = self.session.get(self.loginTestUrl)
-        if res.text.lower().find(self.loginTestString.lower()) < 0:
-            raise Exception("could not log into provided site '%s'"
-                            " (did not find successful login string)"
-                            % self.loginUrl)
-
-    def saveSessionToCache(self):
-        """
-        save session to a cache file
-        """
-        # always save (to update timeout)
-        with open(self.sessionFile, "wb") as f:
-            pickle.dump(self.session, f)
-            if self.debug:
-                print('updated session cache-file %s' % self.sessionFile)
-
-    def retrieveContent(self, url, method = "get", postData = None):
-        """
-        return the content of the url with respect to the session.
-
-        If 'method' is not 'get', the url will be called with 'postData'
-        as a post request.
-        """
-        if method == 'get':
-            res = self.session.get(url , proxies = self.proxies)
-        else:
-            res = self.session.get(url , data = postData, proxies = self.proxies)
-
-        # the session has been updated on the server, so also update in cache
-        self.saveSessionToCache()            
-
-        return res
-
-
 if __name__ == "__main__":
-    username = 'markwhat'
-    password = keyring.get_password("motocrossfantasy", username)
-    loginData = {
-        'login_username': username,
-        'login_password': password,
-        'login': 'true'
-    }
-    loginUrl = 'https://www.motocrossfantasy.com/'
-    loginTestUrl = mfUrl_status
-    successStr = 'Choose Riders'
-    s = MxFantasy(loginUrl, loginData, loginTestUrl, successStr)
-
-    res = s.retrieveContent(mfUrl_status)
-    rider_update_links = mf_find_tables(res.text)
-    print(type(rider_update_links))
-    mf_rider_tables(rider_update_links)
 
 
-    
+    # Assign all point dictionaries/lists to variables
+    my_variables = season('MX')
+    live_url = my_variables[0]
+    pts, pts_udog = my_variables[1:3]
+    pts_dict, pts_dict_udog = my_variables[3:5]
+
+    # mf_master()
+    live_timing_to_sheets()
