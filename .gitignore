@@ -6,11 +6,7 @@ __pycache__/
 requests_demo.py
 www.motocrossfantasy.com_session.dat
 ### VisualStudioCode template
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
+.idea/
 ### Python template
 # Byte-compiled / optimized / DLL files
 *.py[cod]
@@ -125,3 +121,6 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+.vscode/.ropeproject/objectdb
+*.json
+*.json

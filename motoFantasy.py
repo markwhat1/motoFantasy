@@ -5,34 +5,42 @@ import keyring
 import pandas as pd
 import pygsheets
 import requests
+import schedule
+import time
 from bs4 import BeautifulSoup
 
-import values
-
 # MotocrossFantasy.com variables and URLs
+series = 'MX'
 leagueID = 4370
-event = 8
-first_race_id = 437
-race_id_450 = first_race_id + (event * 2 - 2)
-race_id_250 = first_race_id + (event * 2 - 1)
 
-mf_url_base = 'https://www.motocrossfantasy.com/user/'
-mf_url_status = mf_url_base + 'team-status'
-mf_url_team_standings = mf_url_base + 'bench-racing-divisions/' + str(leagueID)
-mf_url_week_standings = mf_url_base + 'weekly-standings/' + str(leagueID)
-mf_url_race_results = mf_url_base + 'race-results'
-mf_url_top_picks = mf_url_base + 'top-picks/2017-MX'
+mf_url_base = 'https://www.motocrossfantasy.com/user'
+mf_url_status = f"{mf_url_base}/team-status"
+mf_url_team_standings = f"{mf_url_base}/bench-racing-divisions/{leagueID}"
+mf_url_week_standings = f"{mf_url_base}/weekly-standings/{leagueID}"
+mf_url_race_results = f"{mf_url_base}/race-results"
+mf_url_top_picks = f"{mf_url_base}/top-picks/2017-MX"
 
+live_url = f"http://americanmotocrosslive.com/xml/{series.lower()}/RaceResults.json"
+
+all_points = {'mx': {'normal': {1: 25, 2: 22, 3: 20, 4: 18, 5: 16, 6: 15, 7: 14, 8: 13, 9: 12, 10: 11,
+                                11: 10, 12: 9, 13: 8, 14: 7, 15: 6, 16: 5, 17: 4, 18: 3, 19: 2, 20: 1,
+                                21: 0, 22: 0, 23: 0, 24: 0, 25: 0, 26: 0, 27: 0, 28: 0, 29: 0, 30: 0,
+                                31: 0, 32: 0, 33: 0, 34: 0, 35: 0, 36: 0, 37: 0, 38: 0, 39: 0, 40: 0},
+                     'udog': {1: 50, 2: 44, 3: 40, 4: 36, 5: 32, 6: 30, 7: 28, 8: 26, 9: 24, 10: 22,
+                              11: 10, 12: 9, 13: 8, 14: 7, 15: 6, 16: 5, 17: 4, 18: 3, 19: 2, 20: 1,
+                              21: 0, 22: 0, 23: 0, 24: 0, 25: 0, 26: 0, 27: 0, 28: 0, 29: 0, 30: 0,
+                              31: 0, 32: 0, 33: 0, 34: 0, 35: 0, 36: 0, 37: 0, 38: 0, 39: 0, 40: 0}},
+              'sx': {'normal': {1: 25, 2: 22, 3: 20, 4: 18, 5: 16, 6: 15, 7: 14, 8: 13, 9: 12, 10: 11,
+                                11: 10, 12: 9, 13: 8, 14: 7, 15: 6, 16: 5, 17: 4, 18: 3, 19: 2, 20: 1, 21: 1, 22: 1},
+                     'udog': {1: 50, 2: 44, 3: 40, 4: 36, 5: 32, 6: 30, 7: 28, 8: 26, 9: 24, 10: 22,
+                              11: 10, 12: 9, 13: 8, 14: 7, 15: 6, 16: 5, 17: 4, 18: 3, 19: 2, 20: 1, 21: 1, 22: 1}}}
+points = all_points[series.lower()]
 
 def mf_master():
     ses = requests.session()
 
-    # we're now going to use the session in 3 different function calls
     mf_auth(ses)
     df_riders = mf_rider_tables(ses)
-
-    # once this function ends we either need to pass the session up to the
-    # calling function or it will be gone forever
     return df_riders
 
 
@@ -81,13 +89,13 @@ def mf_rider_tables(ses):
         rider_tables = pd.read_html(table.prettify(), flavor='bs4')
 
         # Print number of tables found
-        print(str(len(rider_tables)) + " " + str(div) + " class " + " table(s) was found!")
+        print(f"{len(rider_tables)} {div} class table(s) were found!")
 
         # read_html returns list of DataFrames, only need first one
         df_table = rider_tables[0]
 
         # Add Class column to beginning of DataFrame
-        df_table.insert(0, "Class", int(div), allow_duplicates=True)
+        df_table.insert(0, "Class", div, allow_duplicates=True)
 
         # Merge rider lists
         rider_lists.append(df_table)
@@ -110,6 +118,7 @@ def mf_rider_tables(ses):
 
 
 def format_name(df_column):
+    df_column: DataSeries
     df = pd.Series(df_column).to_frame(name='name')
     splits = df['name'].str.split(' ')
     df['last'] = splits.str[1]
@@ -121,7 +130,8 @@ def format_name(df_column):
     return df
 
 
-def live_timing_to_sheets(series='MX'):
+def live_timing_to_sheets(series):
+    series: str
     r = requests.get(live_url)
     live_timing = json.loads(r.text)
 
@@ -136,7 +146,7 @@ def live_timing_to_sheets(series='MX'):
     # Assemble current race information
     status = live_timing['A']
     location = live_timing['T']  # Race location/name - 'Washougal'
-    long_moto_name = live_timing['S'].split(' (', 1)[0] # '450 Class Moto #2'
+    long_moto_name = live_timing['S'].split(' (', 1)[0]  # '450 Class Moto #2'
     short_moto_name = long_moto_name.split('Class ', 1)[1]
     division = long_moto_name.split('Class ', 1)[0]
 
@@ -147,29 +157,12 @@ def live_timing_to_sheets(series='MX'):
     wks = sh.worksheet_by_title('live timing')
 
     # Updates to current race information
-    wks.update_cell('K2', series) # Series (MX or SX)
-    wks.update_cell('L2', location) # Location
-    wks.update_cell('M2', division) # Class
-    wks.update_cell('N2', short_moto_name) # Event
-    wks.set_dataframe(df_live_timing, (1, 1)) # Live timing table
+    wks.update_cell('K2', series)  # Series (MX or SX)
+    wks.update_cell('L2', location)  # Location
+    wks.update_cell('M2', division)  # Class
+    wks.update_cell('N2', short_moto_name)  # Event
+    wks.set_dataframe(df_live_timing, (1, 1))  # Live timing table
     return
-
-
-def season(series='SX'):
-    if series == 'MX':
-        series_value = 0
-    elif series == 'SX':
-        series_value = 1
-    else:
-        print('... What season is it?')
-
-    live_url = 'http://americanmotocrosslive.com/xml/' + series + '/RaceResults.json'
-
-    pts = values.pts[series_value]
-    pts_udog = values.pts_udog[series_value]
-    pts_dict = values.pts_dict[series_value]
-    pts_dict_udog = values.pts_dict_udog[series_value]
-    return [live_url, pts, pts_udog, pts_dict, pts_dict_udog]
 
 
 def get_rider_pts(pos, handicap, udog):
@@ -199,13 +192,15 @@ print(df2)
 '''
 
 if __name__ == "__main__":
+    print(live_url)
 
+    x = 1
+    while x < 60:
+        print(f"Downloading live timing data, update #{x}.")
+        live_timing_to_sheets(series)
+        time.sleep(30)
+        x += 1
 
-    # Assign all point dictionaries/lists to variables
-    my_variables = season('MX')
-    live_url = my_variables[0]
-    pts, pts_udog = my_variables[1:3]
-    pts_dict, pts_dict_udog = my_variables[3:5]
 
     # mf_master()
-    live_timing_to_sheets()
+    # live_timing_to_sheets(series)
