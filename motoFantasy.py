@@ -1,7 +1,8 @@
+import pathlib
 import json
 import re
 
-import keyring
+# import keyring
 import pandas as pd
 import pygsheets
 import requests
@@ -10,7 +11,7 @@ import time
 from bs4 import BeautifulSoup
 
 # MotocrossFantasy.com variables and URLs
-series = 'MX'
+series = 'sx'
 leagueID = 4370
 
 mf_url_base = 'https://www.motocrossfantasy.com/user'
@@ -50,7 +51,8 @@ def mf_auth(session):
     Password is fetched from Windows Credentials Vault.
     """
     username = 'markwhat'
-    password = keyring.get_password("motocrossfantasy", username)
+    password = 'yamaha'
+    # password = keyring.get_password("motocrossfantasy", username)
     payload = {
         'login_username': username,
         'login_password': password,
