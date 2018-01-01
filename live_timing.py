@@ -74,18 +74,17 @@ class Event:
             raise ValueError(f'Invalid series type: "{series}"')
             
         self.series = series.lower()
+        self.lt_url = self.get_live_timing_url()
+        self.info_url = self.get_event_info_url()
         self.location = None  # Race location/name - 'Washougal'
         self.long_moto_name = None  # '450 Class Moto #2'
-        self.short_moto_name = None
+        self.moto_num = None  # 1 or 2
         self.division = None
         self.points_dict = all_points[self.series]
         # self.event_status = event_status
         # self.get_live_timing()
         # self.event_info = get_event_info()
         
-    #def set_series_points(self):
-        #return all_points[self.series]
-
     def get_event_info_url(self):
         if self.series == 'sx':
             info_url = 'http://live.amasupercross.com/xml/sx/Announcements.json'
@@ -95,17 +94,6 @@ class Event:
             raise ValueError(f'Invalid series type: {self.series}')
         return info_url
 
-    def get_event_info(self):
-        info_url = self.get_event_info_url()
-        r = requests.get(info_url)
-        info = json.loads(r.text)
-        
-        self.location = info['T']  # Race location/name - 'Washougal'
-        self.long_moto_name = info['S'].split(' (', 1)[0]  # '450 Class Moto #2'
-        self.short_moto_name = self.long_moto_name.split('Class ', 1)[1]
-        self.division = self.long_moto_name.split('Class ', 1)[0]
-        return info
-        
     def get_live_timing_url(self):
         if self.series == 'sx':
             lt_url = 'http://live.amasupercross.com/xml/sx/Announcements.json'
@@ -115,6 +103,17 @@ class Event:
             raise ValueError(f'Invalid series type: {self.series}')
         return lt_url
 
+    def get_event_info(self):
+        info_url = self.get_event_info_url()
+        r = requests.get(info_url)
+        info = json.loads(r.text)
+        
+        self.location = info['T']  # Race location/name - 'Washougal'
+        self.long_moto_name = info['S'].split(' (', 1)[0]  # '450 Class Moto #2'
+        self.moto_num = int(self.long_moto_name.split('#', 1)[1])
+        self.division = self.long_moto_name.split('Class ', 1)[0]
+        return info
+        
     def get_live_timing(self):
         lt_url = self.get_live_timing_url()
         #obj = untangle.parse(live_timing_url)
@@ -131,7 +130,7 @@ class Event:
 if __name__ == "__main__":
     lt = Event('mx')
     lt.get_event_info()
-    print(lt.long_moto_name)
+    print(lt.moto_num)
     print(lt.division)
     print(lt.location)
     print(lt.points_dict)
