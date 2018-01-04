@@ -123,8 +123,6 @@ $RECYCLE.BIN/
 *.lnk
 .vscode/.ropeproject/objectdb
 *.json
-*.json
 *.iml
 .cprestoretmp812526730384426503
 *.xml
-.vscode/settings.json

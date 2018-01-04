@@ -1,0 +1,19 @@
+[[source]]
+
+url = "https://pypi.python.org/simple"
+verify_ssl = true
+
+
+[packages]
+
+keyring = "*"
+pandas = "*"
+pygsheets = "*"
+requests = "*"
+"bs4" = "*"
+schedule = "*"
+xmltodict = "*"
+
+
+[dev-packages]
+
