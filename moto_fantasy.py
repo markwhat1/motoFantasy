@@ -5,6 +5,7 @@ import re
 # import keyring
 import pandas as pd
 import pygsheets
+import ezsheets
 import requests
 import schedule
 import time
@@ -23,19 +24,36 @@ mf_url_top_picks = f"{mf_url_base}/top-picks/2017-MX"
 
 live_url = f"http://americanmotocrosslive.com/xml/{series.lower()}/RaceResults.json"
 
-all_points = {'mx': {'normal': {1: 25, 2: 22, 3: 20, 4: 18, 5: 16, 6: 15, 7: 14, 8: 13, 9: 12, 10: 11,
-                                11: 10, 12: 9, 13: 8, 14: 7, 15: 6, 16: 5, 17: 4, 18: 3, 19: 2, 20: 1,
-                                21: 0, 22: 0, 23: 0, 24: 0, 25: 0, 26: 0, 27: 0, 28: 0, 29: 0, 30: 0,
-                                31: 0, 32: 0, 33: 0, 34: 0, 35: 0, 36: 0, 37: 0, 38: 0, 39: 0, 40: 0},
-                     'udog': {1: 50, 2: 44, 3: 40, 4: 36, 5: 32, 6: 30, 7: 28, 8: 26, 9: 24, 10: 22,
-                              11: 10, 12: 9, 13: 8, 14: 7, 15: 6, 16: 5, 17: 4, 18: 3, 19: 2, 20: 1,
-                              21: 0, 22: 0, 23: 0, 24: 0, 25: 0, 26: 0, 27: 0, 28: 0, 29: 0, 30: 0,
-                              31: 0, 32: 0, 33: 0, 34: 0, 35: 0, 36: 0, 37: 0, 38: 0, 39: 0, 40: 0}},
-              'sx': {'normal': {1: 25, 2: 22, 3: 20, 4: 18, 5: 16, 6: 15, 7: 14, 8: 13, 9: 12, 10: 11,
-                                11: 10, 12: 9, 13: 8, 14: 7, 15: 6, 16: 5, 17: 4, 18: 3, 19: 2, 20: 1, 21: 1, 22: 1},
-                     'udog': {1: 50, 2: 44, 3: 40, 4: 36, 5: 32, 6: 30, 7: 28, 8: 26, 9: 24, 10: 22,
-                              11: 10, 12: 9, 13: 8, 14: 7, 15: 6, 16: 5, 17: 4, 18: 3, 19: 2, 20: 1, 21: 1, 22: 1}}}
-points = all_points[series.lower()]
+
+# Create pos/points dictionaries
+pts_sx = [26, 23, 21, 19, 18, 17, 16, 15, 14, 13,  # 1-10
+          12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]  # 11-22
+dict_sx = dict(zip(range(1, len(pts_sx) + 1), pts_sx))
+dict_sx_udog = dict_sx.copy()
+for key in dict_sx_udog.keys():
+    if key <= 10:
+        dict_sx_udog[key] *= 2
+
+pts_mx = [25, 22, 20, 18, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3,
+          2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+dict_mx = dict(zip(range(1, len(pts_mx) + 1), pts_mx))
+dict_mx_udog = dict_mx.copy()
+for key in dict_mx_udog.keys():
+    if key <= 10:
+        dict_mx_udog[key] *= 2
+
+# Create master pos/points nested dictionary, then select dictionary based on series
+pts_all = {}
+pts_all['mx'] = {}
+pts_all['mx']['normal'] = dict_mx
+pts_all['mx']['udog'] = dict_mx_udog
+pts_all['sx'] = {}
+pts_all['sx']['normal'] = dict_sx
+pts_all['sx']['udog'] = dict_sx_udog
+
+points = pts_all[series.lower()]
+print(points)
+
 
 def mf_master():
     ses = requests.session()
@@ -51,7 +69,7 @@ def mf_auth(session):
     Password is fetched from Windows Credentials Vault.
     """
     username = 'markwhat'
-    password = 'yamaha'
+    password = 'bea1+9-@oD4YBKE7sdbX'
     # password = keyring.get_password("motocrossfantasy", username)
     payload = {
         'login_username': username,
@@ -120,7 +138,9 @@ def mf_rider_tables(ses):
 
 
 def format_name(df_column):
+    """
     df_column: DataSeries
+    """
     df = pd.Series(df_column).to_frame(name='name')
     splits = df['name'].str.split(' ')
     df['last'] = splits.str[1]
@@ -148,23 +168,28 @@ def live_timing_to_sheets(series):
     # Assemble current race information
     status = live_timing['A']
     location = live_timing['T']  # Race location/name - 'Washougal'
-    long_moto_name = live_timing['S'].split(' (', 1)[0]  # '450 Class Moto #2'
-    short_moto_name = long_moto_name.split('Class ', 1)[1]
-    division = long_moto_name.split('Class ', 1)[0]
+    if series == 'sx':
+        long_moto_name = live_timing['S']
+        short_moto_name = live_timing['S']
+        division = live_timing['S']
+    else:
+        long_moto_name = live_timing['S'].split(' (', 1)[0]  # '450 Class Moto #2'
+        short_moto_name = long_moto_name.split('Class ', 1)[1]
+        division = long_moto_name.split('Class ', 1)[0]
 
-    gc = pygsheets.authorize(no_cache=True)
-
-    # Open spreadsheet and then worksheet
-    sh = gc.open('2017 fantasy supercross')
-    wks = sh.worksheet_by_title('live timing')
+    client = pygsheets.authorize(no_cache=True)
+    ss = client.open('2020 fantasy supercross')
+    # ss.DataRange(start='A1', end='D1', worksheet='live_timing')
+    wks = ss.worksheet_by_title('live_timing')
 
     # Updates to current race information
-    wks.update_cell('K2', series)  # Series (MX or SX)
-    wks.update_cell('L2', location)  # Location
-    wks.update_cell('M2', division)  # Class
-    wks.update_cell('N2', short_moto_name)  # Event
-    wks.set_dataframe(df_live_timing, (1, 1))  # Live timing table
-    return
+    # wks.update_values('A1:D1', values=([series.upper(), location, division, short_moto_name]))  # Series (MX or SX)
+
+    # wks.update_cell('B1', location)  # Location
+    # wks.update_cell('C1', division)  # Class
+    # wks.update_cell('D1', short_moto_name)  # Event
+    wks.set_dataframe(df_live_timing, (3, 1))  # Live timing table
+    return df_live_timing
 
 
 def get_rider_pts(pos, handicap, udog):
