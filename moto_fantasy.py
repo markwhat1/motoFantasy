@@ -1,26 +1,24 @@
-import pathlib
 import json
 import re
 
 # import keyring
 import pandas as pd
 import pygsheets
-import ezsheets
 import requests
-import schedule
-import time
 from bs4 import BeautifulSoup
 
 # MotocrossFantasy.com variables and URLs
 series = 'sx'
 leagueID = 4370
+username = 'markwhat'
+password = 'bea1+9-@oD4YBKE7sdbX'
 
-mf_url_base = 'https://www.motocrossfantasy.com/user'
-mf_url_status = f"{mf_url_base}/team-status"
-mf_url_team_standings = f"{mf_url_base}/bench-racing-divisions/{leagueID}"
-mf_url_week_standings = f"{mf_url_base}/weekly-standings/{leagueID}"
-mf_url_race_results = f"{mf_url_base}/race-results"
-mf_url_top_picks = f"{mf_url_base}/top-picks/2017-MX"
+mf_url_base = 'https://www.motocrossfantasy.com'
+mf_url_status = f"{mf_url_base}/user/team-status"
+mf_url_team_standings = f"{mf_url_base}/user/bench-racing-divisions/{leagueID}"
+mf_url_week_standings = f"{mf_url_base}/user/weekly-standings/{leagueID}"
+mf_url_race_results = f"{mf_url_base}/user/race-results"
+mf_url_top_picks = f"{mf_url_base}/user/top-picks/2020-SX"
 
 live_url = f"http://americanmotocrosslive.com/xml/{series.lower()}/RaceResults.json"
 
@@ -43,7 +41,7 @@ for key in dict_mx_udog.keys():
         dict_mx_udog[key] *= 2
 
 # Create master pos/points nested dictionary, then select dictionary based on series
-pts_all = {}
+pts_all = dict()
 pts_all['mx'] = {}
 pts_all['mx']['normal'] = dict_mx
 pts_all['mx']['udog'] = dict_mx_udog
@@ -52,31 +50,60 @@ pts_all['sx']['normal'] = dict_sx
 pts_all['sx']['udog'] = dict_sx_udog
 
 points = pts_all[series.lower()]
-print(points)
+
+
+# print(points)
 
 
 def mf_master():
-    ses = requests.session()
-
-    mf_auth(ses)
-    df_riders = mf_rider_tables(ses)
-    return df_riders
-
-
-def mf_auth(session):
-    """
-    Returns an authenticated session with 'motocrossfantasy.com'.
-    Password is fetched from Windows Credentials Vault.
-    """
-    username = 'markwhat'
-    password = 'bea1+9-@oD4YBKE7sdbX'
-    # password = keyring.get_password("motocrossfantasy", username)
     payload = {
         'login_username': username,
         'login_password': password,
         'login': 'true'
     }
-    session.post(mf_url_base, data=payload)
+
+    # Use 'with' to ensure the session context is closed after use.
+    with requests.Session() as s:
+        s.post(mf_url_base, data=payload)
+
+        html = s.get(mf_url_status).content
+        soup = BeautifulSoup(html, 'lxml')
+        status = soup.find('h3')
+        # if check_sheets_update(status):
+        riders = mf_rider_tables(s)
+        rider_list_to_sheets(riders)
+        # print(status.text)
+
+    return
+
+
+def check_sheets_update(status):
+    client = pygsheets.authorize(no_cache=True)
+    ss = client.open('2020 fantasy supercross')
+
+    wks = ss.worksheet_by_title('rider_list')
+    old_status = wks.get_value('A1')
+    if old_status == status:
+        update_data = False
+        pass
+    else:
+        update_data = True
+        # wks.update_value('A1', val=status)
+    return update_data
+
+
+def create_pts_dict(cur_series, points):
+    dict_pos = dict(zip(range(1, len(points) + 1), points))
+    dict_pos_udog = dict_pos.copy()
+    for key in dict_pos_udog.keys():
+        if key <= 10:
+            dict_pos_udog[key] *= 2
+    dict_pts = dict()
+    dict_pts[cur_series.lower()] = dict()
+    dict_pts[cur_series.lower()]['normal'] = dict_pos
+    dict_pts[cur_series.lower()]['udog'] = dict_pos_udog
+    print(dict_pts)
+    return dict_pts
 
 
 def mf_find_table_urls(ses):
@@ -98,6 +125,7 @@ def mf_find_table_urls(ses):
 
 def mf_rider_tables(ses):
     rider_urls = mf_find_table_urls(ses)
+    print(rider_urls)
 
     rider_lists = []
     for div in rider_urls.keys():
@@ -134,6 +162,9 @@ def mf_rider_tables(ses):
         df_riders['Name'] = format_name(df_riders['Name'])
     else:
         print("Rider columns could not be found.")
+
+    df_riders.to_csv('rider_lists.csv')
+
     return df_riders
 
 
@@ -152,8 +183,28 @@ def format_name(df_column):
     return df
 
 
-def live_timing_to_sheets(series):
-    series: str
+def rider_list_to_sheets(rider_list):
+    client = pygsheets.authorize(no_cache=True)
+    ss = client.open('2020 fantasy supercross')
+
+    wks = ss.worksheet_by_title('rider_list')
+    wks.clear(start='B1')
+    wks.set_dataframe(rider_list, (3, 1))
+
+    # df_450 = rider_list[rider_list['Class'] == 450]
+    # df_250 = rider_list[rider_list['Class'] == 250]
+    #
+    # wks_450 = ss.worksheet_by_title('450_riders')
+    # wks_450.clear()
+    # wks_450.set_dataframe(df_450, (1, 1))
+    #
+    # wks_250 = ss.worksheet_by_title('250_riders')
+    # wks_250.clear()
+    # wks_250.set_dataframe(df_250, (1, 1))
+    return
+
+
+def live_timing_to_sheets(ser):
     r = requests.get(live_url)
     live_timing = json.loads(r.text)
 
@@ -168,7 +219,7 @@ def live_timing_to_sheets(series):
     # Assemble current race information
     status = live_timing['A']
     location = live_timing['T']  # Race location/name - 'Washougal'
-    if series == 'sx':
+    if ser == 'sx':
         long_moto_name = live_timing['S']
         short_moto_name = live_timing['S']
         division = live_timing['S']
@@ -192,7 +243,7 @@ def live_timing_to_sheets(series):
     return df_live_timing
 
 
-def get_rider_pts(pos, handicap, udog):
+def get_rider_pts(live_pos, icap, udog):
     '''
     Get riders approrpriate pts based on handcap and underdog status.
     pos = whole number value
@@ -221,12 +272,17 @@ print(df2)
 if __name__ == "__main__":
     print(live_url)
 
-    x = 1
-    while x < 60:
-        print(f"Downloading live timing data, update #{x}.")
-        live_timing_to_sheets(series)
-        time.sleep(30)
-        x += 1
+    print(mf_master())
+
+    # pts_sx = [26, 23, 21, 19, 18, 17, 16, 15, 14, 13,  # 1-10
+    #           12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]  # 11-22
+    # create_pts_dict('sx', pts_sx)
+    # x = 1
+    # while x < 60:
+    #     print(f"Downloading live timing data, update #{x}.")
+    #     live_timing_to_sheets(series)
+    #     time.sleep(30)
+    #     x += 1
 
 
     # mf_master()
