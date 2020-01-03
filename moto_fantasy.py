@@ -1,5 +1,6 @@
 import json
 import re
+import time
 
 # import keyring
 import pandas as pd
@@ -23,87 +24,26 @@ mf_url_top_picks = f"{mf_url_base}/user/top-picks/2020-SX"
 live_url = f"http://americanmotocrosslive.com/xml/{series.lower()}/RaceResults.json"
 
 
-# Create pos/points dictionaries
-pts_sx = [26, 23, 21, 19, 18, 17, 16, 15, 14, 13,  # 1-10
-          12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]  # 11-22
-dict_sx = dict(zip(range(1, len(pts_sx) + 1), pts_sx))
-dict_sx_udog = dict_sx.copy()
-for key in dict_sx_udog.keys():
-    if key <= 10:
-        dict_sx_udog[key] *= 2
-
-pts_mx = [25, 22, 20, 18, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3,
-          2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-dict_mx = dict(zip(range(1, len(pts_mx) + 1), pts_mx))
-dict_mx_udog = dict_mx.copy()
-for key in dict_mx_udog.keys():
-    if key <= 10:
-        dict_mx_udog[key] *= 2
-
-# Create master pos/points nested dictionary, then select dictionary based on series
-pts_all = dict()
-pts_all['mx'] = {}
-pts_all['mx']['normal'] = dict_mx
-pts_all['mx']['udog'] = dict_mx_udog
-pts_all['sx'] = {}
-pts_all['sx']['normal'] = dict_sx
-pts_all['sx']['udog'] = dict_sx_udog
-
-points = pts_all[series.lower()]
-
-
-# print(points)
-
-
 def mf_master():
-    payload = {
-        'login_username': username,
-        'login_password': password,
-        'login': 'true'
-    }
+    payload = {'login_username': username, 'login_password': password, 'login': 'true'}
 
     # Use 'with' to ensure the session context is closed after use.
     with requests.Session() as s:
         s.post(mf_url_base, data=payload)
 
+        # Get current week header from status page to see if update required
         html = s.get(mf_url_status).content
         soup = BeautifulSoup(html, 'lxml')
-        status = soup.find('h3')
-        # if check_sheets_update(status):
-        riders = mf_rider_tables(s)
-        rider_list_to_sheets(riders)
-        # print(status.text)
+        status = soup.h3.get_text()
+        print(f'"{status}" is the current status.')
 
-    return
-
-
-def check_sheets_update(status):
-    client = pygsheets.authorize(no_cache=True)
-    ss = client.open('2020 fantasy supercross')
-
-    wks = ss.worksheet_by_title('rider_list')
-    old_status = wks.get_value('A1')
-    if old_status == status:
-        update_data = False
-        pass
-    else:
-        update_data = True
-        # wks.update_value('A1', val=status)
-    return update_data
-
-
-def create_pts_dict(cur_series, points):
-    dict_pos = dict(zip(range(1, len(points) + 1), points))
-    dict_pos_udog = dict_pos.copy()
-    for key in dict_pos_udog.keys():
-        if key <= 10:
-            dict_pos_udog[key] *= 2
-    dict_pts = dict()
-    dict_pts[cur_series.lower()] = dict()
-    dict_pts[cur_series.lower()]['normal'] = dict_pos
-    dict_pts[cur_series.lower()]['udog'] = dict_pos_udog
-    print(dict_pts)
-    return dict_pts
+        # Check if status is the same or if rider lists need to be updated
+        if check_sheets_update(status):
+            riders = mf_rider_tables(s)
+            rider_list_to_sheets(riders)
+        else:
+            riders = pd.read_csv('rider_lists.csv')
+    return riders
 
 
 def mf_find_table_urls(ses):
@@ -125,7 +65,6 @@ def mf_find_table_urls(ses):
 
 def mf_rider_tables(ses):
     rider_urls = mf_find_table_urls(ses)
-    print(rider_urls)
 
     rider_lists = []
     for div in rider_urls.keys():
@@ -163,24 +102,25 @@ def mf_rider_tables(ses):
     else:
         print("Rider columns could not be found.")
 
-    df_riders.to_csv('rider_lists.csv')
-
+    df_riders.to_csv('rider_lists.csv', index=False)
     return df_riders
 
 
-def format_name(df_column):
-    """
-    df_column: DataSeries
-    """
-    df = pd.Series(df_column).to_frame(name='name')
-    splits = df['name'].str.split(' ')
-    df['last'] = splits.str[1]
-    df['first'] = splits.str[0]
-    df['first'] = df['first'].str.slice(0, 1) + str('.')
-    df['name'] = df['last'].str.cat(
-        df['first'], sep=', ')
-    df = df.loc[:, 'name']
-    return df
+def check_sheets_update(status):
+    client = pygsheets.authorize(no_cache=True)
+    ss = client.open('2020 fantasy supercross')
+
+    wks = ss.worksheet_by_title('update')
+    old_status = wks.get_value('A1')
+    if old_status == status:
+        print('No rider list update required. Loading CSV data.')
+        update_data = False
+        pass
+    else:
+        print('Rider list update will be performed.')
+        update_data = True
+        wks.update_value('A1', status)
+    return update_data
 
 
 def rider_list_to_sheets(rider_list):
@@ -204,22 +144,24 @@ def rider_list_to_sheets(rider_list):
     return
 
 
-def live_timing_to_sheets(ser):
+def live_timing_to_sheets():
     r = requests.get(live_url)
     live_timing = json.loads(r.text)
 
-    column_names = {'A': 'pos', 'F': 'name', 'N': 'num', 'L': 'laps', 'G': 'gap',
-                    'D': 'diff', 'BL': 'bestlap', 'LL': 'lastlap', 'S': 'status'}
+    column_names = {'A': 'pos', 'F': 'name', 'N': 'num', 'L': 'laps', 'G': 'gap', 'D': 'diff', 'BL': 'bestlap',
+                    'LL': 'lastlap', 'S': 'status'}
 
-    df_live_timing = pd.DataFrame.from_records(
-        live_timing['B'], columns=list(column_names.keys()))
+    df_live_timing = pd.DataFrame.from_records(live_timing['B'], columns=list(column_names.keys()))
     df_live_timing.rename(columns=column_names, inplace=True)
     df_live_timing['name'] = format_name(df_live_timing['name'])
+
+    # Save live timing DataFrame to CSV
+    df_live_timing.to_csv('live_timing.csv', index=False)
 
     # Assemble current race information
     status = live_timing['A']
     location = live_timing['T']  # Race location/name - 'Washougal'
-    if ser == 'sx':
+    if series == 'sx':
         long_moto_name = live_timing['S']
         short_moto_name = live_timing['S']
         division = live_timing['S']
@@ -230,60 +172,93 @@ def live_timing_to_sheets(ser):
 
     client = pygsheets.authorize(no_cache=True)
     ss = client.open('2020 fantasy supercross')
-    # ss.DataRange(start='A1', end='D1', worksheet='live_timing')
     wks = ss.worksheet_by_title('live_timing')
 
     # Updates to current race information
-    # wks.update_values('A1:D1', values=([series.upper(), location, division, short_moto_name]))  # Series (MX or SX)
+    wks.update_values('A1:D1', [[series.upper(), location, division, short_moto_name]])
 
-    # wks.update_cell('B1', location)  # Location
-    # wks.update_cell('C1', division)  # Class
-    # wks.update_cell('D1', short_moto_name)  # Event
+    # Update live timing table beneath current race information
     wks.set_dataframe(df_live_timing, (3, 1))  # Live timing table
     return df_live_timing
 
 
-def get_rider_pts(live_pos, icap, udog):
-    '''
-    Get riders approrpriate pts based on handcap and underdog status.
-    pos = whole number value
-    handcap = whole number value
-    udog = boolean test
-    '''
-    if handicap >= pos:
-        hc_pos = 1
+def format_name(df_column):
+    """
+    df_column: DataSeries
+    """
+    df = pd.Series(df_column).to_frame(name='name')
+    splits = df['name'].str.split(' ')
+    df['last'] = splits.str[1]
+    df['first'] = splits.str[0]
+    df['first'] = df['first'].str.slice(0, 1) + str('.')
+    df['name'] = df['last'].str.cat(df['first'], sep=', ')
+    df = df.loc[:, 'name']
+    return df
+
+
+def create_pts_dict():
+    # Create pos/points dictionaries
+    if series == 'sx':
+        pts = [26, 23, 21, 19, 18, 17, 16, 15, 14, 13,  # 1-10
+               12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]   # 11-22
     else:
-        hc_pos = handicap - pos
-    return
+        pts = [25, 22, 20, 18, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3,   # 1-18
+               2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # 19-40
 
+    dict_pos = dict(zip(range(1, len(pts) + 1), pts))
+    dict_pos_udog = dict_pos.copy()
+    for x in dict_pos_udog.keys():
+        if x <= 10:
+            dict_pos_udog[x] *= 2
+    dict_pts = dict()
+    dict_pts['normal'] = dict_pos
+    dict_pts['udog'] = dict_pos_udog
+    return dict_pts
 
-# Datebase beginning
-'''
-df = live_timing_parse()
-conn = sqlite3.connect('liveTiming.db')
-c = conn.cursor()
-
-df.to_sql("liveResults", conn, if_exists="replace")
-
-df2 = pd.read_sql_query("select * from liveResults", conn)
-print(df2)
-'''
 
 if __name__ == "__main__":
-    print(live_url)
+    # Update rider lists on Google Sheets; save riders DataFrame
+    # df_rider_list = mf_master()
+    # print(df_rider_list)
+    # df_live_timing = live_timing_to_sheets()
+    # print(df_live_timing)
 
-    print(mf_master())
+    df_live = pd.read_csv('live_timing.csv')
+    df_live = df_live[['pos', 'name']]
+    df_rider = pd.read_csv('rider_lists.csv')
+    df_rider = df_rider[['Name', 'HC', 'UD']]
+    print(df_live)
+    print(df_rider)
 
-    # pts_sx = [26, 23, 21, 19, 18, 17, 16, 15, 14, 13,  # 1-10
-    #           12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]  # 11-22
-    # create_pts_dict('sx', pts_sx)
+    df2 = df_live.merge(df_rider, how='left', left_on='name', right_on='Name')
+    df2['adj_pos'] = df2['pos'] - df2['HC']
+    df2['adj_pos'] = df2.adj_pos.mask(df2.adj_pos == 0, 1)
+    df2 = df2.fillna(0, downcast='infer')
+
+    points = create_pts_dict()
+
+    df2['pts_normal'] = df2['adj_pos'].map(points['normal'])
+    df2['pts_udog'] = df2['adj_pos'].map(points['udog'])
+    print(df2)
+
+    filter1 = df2['UD'] == 'Yes'
+    filter2 = df2['adj_pos'] <= 10
+    df2['pts_udog'] = df2.pts_udog.where(filter1 & filter2, 0)
+
+    df2['pts'] = df2[['pts_normal', 'pts_udog']].max(axis=1)
+    df2 = df2.drop(['Name', 'pts_normal', 'pts_udog'], axis=1)
+    df2 = df2.fillna(0, downcast='infer')
+
+    # df2['pts_udog'] = df2.pts_udog.where(df2.UD == 'Yes' & df2.adj_pos <= 10, 0)
+    # df2['pts_udog'] = df2.pts_udog.where(df2.adj_pos <= 10, 0)
+
+    print(df2)
+
     # x = 1
     # while x < 60:
     #     print(f"Downloading live timing data, update #{x}.")
-    #     live_timing_to_sheets(series)
+    #     live_timing_to_sheets()
     #     time.sleep(30)
     #     x += 1
 
-
-    # mf_master()
-    # live_timing_to_sheets(series)
+    # mf_master()  # live_timing_to_sheets(series)
