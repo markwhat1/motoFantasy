@@ -11,5 +11,7 @@ requests = "*"
 schedule = "*"
 xmltodict = "*"
 numpy = "*"
+lxml = "*"
+html5lib = "*"
 
 [dev-packages]
