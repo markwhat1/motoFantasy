@@ -2,7 +2,6 @@ import json
 import re
 import time
 
-# import keyring
 import pandas as pd
 import pygsheets
 import requests
@@ -21,6 +20,7 @@ mf_url_week_standings = f"{mf_url_base}/user/weekly-standings/{leagueID}"
 mf_url_race_results = f"{mf_url_base}/user/race-results"
 mf_url_top_picks = f"{mf_url_base}/user/top-picks/2020-SX"
 
+# Live timing JSON URL
 live_url = f"http://americanmotocrosslive.com/xml/{series.lower()}/RaceResults.json"
 
 
