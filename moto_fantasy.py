@@ -22,6 +22,17 @@ mf_url_top_picks = f"{mf_url_base}/user/top-picks/2020-SX"
 
 # Live timing JSON URL
 live_url = f"http://americanmotocrosslive.com/xml/{series.lower()}/RaceResults.json"
+announce_url = f"http://americanmotocrosslive.com/xml/{series.lower()}/Announcements.json"
+
+# Supercross Race List
+main_450_str = '450SX Main Event'
+main_250_str = '250SX Main Event'
+heat1_250_str = '250SX Heat #1'
+heat2_250_str = '250SX Heat #2'
+heat1_450_str = '450SX Heat #1'
+heat2_450_str = '450SX Heat #2'
+lcq_250_str = '250SX LCQ'
+lcq_450_str = '450SX LCQ'
 
 
 def mf_master():
@@ -34,7 +45,8 @@ def mf_master():
         # Get current week header from status page to see if update required
         html = s.get(mf_url_status).content
         soup = BeautifulSoup(html, 'lxml')
-        status = soup.h3.get_text()
+        status_header = soup.h3.get_text()
+        status = status_header.split(': ', 1)[1]
         print(f'"{status}" is the current status.')
 
         # Check if status is the same or if rider lists need to be updated
@@ -58,7 +70,7 @@ def mf_find_table_urls(ses):
     for link in soup.find_all('a', href=re.compile('pick-riders')):
         table_urls.append(link['href'])
 
-    divisions = [250, 450]
+    divisions = [450, 250]
     div_dict = {k: v for (k, v) in zip(divisions, table_urls)}
     return div_dict
 
@@ -113,7 +125,7 @@ def check_sheets_update(status):
     wks = ss.worksheet_by_title('update')
     old_status = wks.get_value('A1')
     if old_status == status:
-        print('No rider list update required. Loading CSV data.')
+        #         print('No rider list update required. Loading CSV data.')
         update_data = False
         pass
     else:
@@ -144,7 +156,7 @@ def rider_list_to_sheets(rider_list):
     return
 
 
-def live_timing_to_sheets():
+def get_live_timing():
     r = requests.get(live_url)
     live_timing = json.loads(r.text)
 
@@ -159,27 +171,77 @@ def live_timing_to_sheets():
     df_live_timing.to_csv('live_timing.csv', index=False)
 
     # Assemble current race information
-    status = live_timing['A']
-    location = live_timing['T']  # Race location/name - 'Washougal'
-    if series == 'sx':
-        long_moto_name = live_timing['S']
-        short_moto_name = live_timing['S']
-        division = live_timing['S']
-    else:
-        long_moto_name = live_timing['S'].split(' (', 1)[0]  # '450 Class Moto #2'
-        short_moto_name = long_moto_name.split('Class ', 1)[1]
-        division = long_moto_name.split('Class ', 1)[0]
-
-    client = pygsheets.authorize(no_cache=True)
-    ss = client.open('2020 fantasy supercross')
-    wks = ss.worksheet_by_title('live_timing')
-
-    # Updates to current race information
-    wks.update_values('A1:D1', [[series.upper(), location, division, short_moto_name]])
+    # status = live_timing['A']
+    # location = live_timing['T']  # Race location/name - 'Washougal'
+    # if series == 'sx':
+    #     long_moto_name = live_timing['S']
+    #     short_moto_name = live_timing['S']
+    #     division = live_timing['S']
+    # else:
+    #     long_moto_name = live_timing['S'].split(' (', 1)[0]  # '450 Class Moto #2'
+    #     short_moto_name = long_moto_name.split('Class ', 1)[1]
+    #     division = long_moto_name.split('Class ', 1)[0]
+    #
+    # client = pygsheets.authorize(no_cache=True)
+    # ss = client.open('2020 fantasy supercross')
+    # wks = ss.worksheet_by_title('live_timing')
+    #
+    # # Updates to current race information
+    # wks.update_values('A1:D1', [[series.upper(), location, division, short_moto_name]])
 
     # Update live timing table beneath current race information
-    wks.set_dataframe(df_live_timing, (3, 1))  # Live timing table
+    #     wks.set_dataframe(df_live_timing, (3, 1))  # Live timing table
     return df_live_timing
+
+
+def get_announcements():
+    r = requests.get(announce_url)
+    announce = json.loads(r.text)
+    return announce
+
+
+def comb_live_timing_to_sheets(sheet):
+    df_live = get_live_timing()
+    df_rider = mf_master()
+
+    # Keep only needed columns from rider lists
+    df_rider = df_rider[['Name', 'HC', 'UD']]
+    df_rider['Name'] = df_rider['Name'].str.replace('McAdoo', 'Mcadoo')
+    df_rider['Name'] = df_rider['Name'].str.replace('DeCotis', 'Decotis')
+
+    # Merge LiveTiming and rider lists on name columns
+    # Left keeps all rows from live_timing, even if no matches found
+    df = df_live.merge(df_rider, how='left', left_on='name', right_on='Name')
+
+    # Calc adjusted position, then set any 0 values to 1 as you can't finish less than 1
+    df['adj_pos'] = df['pos'] - df['HC']
+    df['adj_pos'] = df.adj_pos.mask(df.adj_pos <= 0, 1)
+    df = df.fillna(0, downcast='infer')
+
+    # Create points dictionary and then map adj_pos values to each point total
+    points = create_pts_dict()
+    df['pts_normal'] = df['adj_pos'].map(points['normal'])
+    df['pts_udog'] = df['adj_pos'].map(points['udog'])
+
+    # When these filters are true, don't change values; if not true, set value to 0
+    filter1 = df['UD'] == 'Yes'
+    filter2 = df['adj_pos'] <= 10
+    df['pts_udog'] = df.pts_udog.where(filter1 & filter2, 0)
+
+    # Find max points between udog and normal point totals, then drop unused columns
+    df['pts'] = df[['pts_normal', 'pts_udog']].max(axis=1)
+    df = df.drop(['Name', 'pts_normal', 'pts_udog', 'adj_pos'], axis=1)  # 
+    df = df.fillna(0, downcast='infer')
+
+    #     df.sort_values(by=['pts', 'name'], ascending=[False, True])
+    df.style.hide_index()
+
+    # Upload combined LiveTiming dataframe to Google Sheets
+    client = pygsheets.authorize(no_cache=True)
+    ss = client.open('2020 fantasy supercross')
+    wks = ss.worksheet_by_title(sheet)
+    wks.set_dataframe(df, (1, 1))  # Live timing table
+    return df.style.hide_index()
 
 
 def format_name(df_column):
@@ -200,9 +262,9 @@ def create_pts_dict():
     # Create pos/points dictionaries
     if series == 'sx':
         pts = [26, 23, 21, 19, 18, 17, 16, 15, 14, 13,  # 1-10
-               12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]   # 11-22
+               12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]  # 11-22
     else:
-        pts = [25, 22, 20, 18, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3,   # 1-18
+        pts = [25, 22, 20, 18, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3,  # 1-18
                2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # 19-40
 
     dict_pos = dict(zip(range(1, len(pts) + 1), pts))
@@ -217,48 +279,22 @@ def create_pts_dict():
 
 
 if __name__ == "__main__":
-    # Update rider lists on Google Sheets; save riders DataFrame
-    # df_rider_list = mf_master()
-    # print(df_rider_list)
-    # df_live_timing = live_timing_to_sheets()
-    # print(df_live_timing)
+    x = 1
+    while x < 100:
+        print(f"Downloading live timing data, update #{x}.")
 
-    df_live = pd.read_csv('live_timing.csv')
-    df_live = df_live[['pos', 'name']]
-    df_rider = pd.read_csv('rider_lists.csv')
-    df_rider = df_rider[['Name', 'HC', 'UD']]
-    print(df_live)
-    print(df_rider)
+        # Test Announcements.json for race being complete
+        announcements = get_announcements()  # Returns JSON object
+        race = announcements['S'].split(' - ')[0]  # Returns race title only
 
-    df2 = df_live.merge(df_rider, how='left', left_on='name', right_on='Name')
-    df2['adj_pos'] = df2['pos'] - df2['HC']
-    df2['adj_pos'] = df2.adj_pos.mask(df2.adj_pos == 0, 1)
-    df2 = df2.fillna(0, downcast='infer')
+        complete_str = 'Session Complete'  # Search in M keys
+        event_list = announcements['B']
+        for event in event_list:
+            if complete_str in event['M']:
+                comb_live_timing_to_sheets(sheet='live_timing')
+                comb_live_timing_to_sheets(sheet=race)
+            else:
+                comb_live_timing_to_sheets(sheet='live_timing')
 
-    points = create_pts_dict()
-
-    df2['pts_normal'] = df2['adj_pos'].map(points['normal'])
-    df2['pts_udog'] = df2['adj_pos'].map(points['udog'])
-    print(df2)
-
-    filter1 = df2['UD'] == 'Yes'
-    filter2 = df2['adj_pos'] <= 10
-    df2['pts_udog'] = df2.pts_udog.where(filter1 & filter2, 0)
-
-    df2['pts'] = df2[['pts_normal', 'pts_udog']].max(axis=1)
-    df2 = df2.drop(['Name', 'pts_normal', 'pts_udog'], axis=1)
-    df2 = df2.fillna(0, downcast='infer')
-
-    # df2['pts_udog'] = df2.pts_udog.where(df2.UD == 'Yes' & df2.adj_pos <= 10, 0)
-    # df2['pts_udog'] = df2.pts_udog.where(df2.adj_pos <= 10, 0)
-
-    print(df2)
-
-    # x = 1
-    # while x < 60:
-    #     print(f"Downloading live timing data, update #{x}.")
-    #     live_timing_to_sheets()
-    #     time.sleep(30)
-    #     x += 1
-
-    # mf_master()  # live_timing_to_sheets(series)
+        time.sleep(30)
+        x += 1
