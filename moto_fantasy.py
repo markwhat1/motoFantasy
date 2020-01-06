@@ -282,6 +282,7 @@ if __name__ == "__main__":
     x = 1
     while x < 100:
         print(f"Downloading live timing data, update #{x}.")
+        comb_live_timing_to_sheets(sheet='live_timing')
 
         # Test Announcements.json for race being complete
         announcements = get_announcements()  # Returns JSON object
@@ -290,11 +291,9 @@ if __name__ == "__main__":
         complete_str = 'Session Complete'  # Search in M keys
         event_list = announcements['B']
         for event in event_list:
+            print(event)
             if complete_str in event['M']:
-                comb_live_timing_to_sheets(sheet='live_timing')
                 comb_live_timing_to_sheets(sheet=race)
-            else:
-                comb_live_timing_to_sheets(sheet='live_timing')
 
         time.sleep(30)
         x += 1
