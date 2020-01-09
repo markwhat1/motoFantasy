@@ -106,7 +106,7 @@ def mf_rider_tables(ses):
     df_riders.drop(df_riders.columns[1], axis=1, inplace=True)
 
     # Rename columns to logical headers
-    cols = ['Class', 'Name', 'HC', 'LF', 'UD']
+    cols = ['Class', 'Name', 'hc', 'LF', 'udog']
 
     if len(df_riders.columns) == 5:
         df_riders.columns = cols
@@ -124,13 +124,10 @@ def check_sheets_update(status):
 
     wks = ss.worksheet_by_title('update')
     old_status = wks.get_value('A1')
-    if old_status == status:
-        #         print('No rider list update required. Loading CSV data.')
-        update_data = False
-        pass
-    else:
-        print('Rider list update will be performed.')
+    update_data = False
+    if old_status != status:
         update_data = True
+        print('Rider list update will be performed.')
         wks.update_value('A1', status)
     return update_data
 
@@ -200,41 +197,44 @@ def get_announcements():
     return announce
 
 
-def comb_live_timing_to_sheets(sheet):
-    df_live = get_live_timing()
-    df_rider = mf_master()
+def comb_live_timing_to_sheets(sheet, data=None):
+    if data:
+        df = data
+    else:
+        df_live = get_live_timing()
+        df_rider = mf_master()
 
-    # Keep only needed columns from rider lists
-    df_rider = df_rider[['Name', 'HC', 'UD']]
-    df_rider['Name'] = df_rider['Name'].str.replace('McAdoo', 'Mcadoo')
-    df_rider['Name'] = df_rider['Name'].str.replace('DeCotis', 'Decotis')
+        # Keep only needed columns from rider lists
+        df_rider = df_rider[['Name', 'hc', 'udog']]
+        df_rider['Name'] = df_rider['Name'].str.replace('McAdoo', 'Mcadoo')
+        df_rider['Name'] = df_rider['Name'].str.replace('DeCotis', 'Decotis')
 
-    # Merge LiveTiming and rider lists on name columns
-    # Left keeps all rows from live_timing, even if no matches found
-    df = df_live.merge(df_rider, how='left', left_on='name', right_on='Name')
+        # Merge LiveTiming and rider lists on name columns
+        # Left keeps all rows from live_timing, even if no matches found
+        df = df_live.merge(df_rider, how='left', left_on='name', right_on='Name')
 
-    # Calc adjusted position, then set any 0 values to 1 as you can't finish less than 1
-    df['adj_pos'] = df['pos'] - df['HC']
-    df['adj_pos'] = df.adj_pos.mask(df.adj_pos <= 0, 1)
-    df = df.fillna(0, downcast='infer')
+        # Calc adjusted position, then set any 0 values to 1 as you can't finish less than 1
+        df['adj_pos'] = df['pos'] - df['hc']
+        df['adj_pos'] = df.adj_pos.mask(df.adj_pos <= 0, 1)
+        df = df.fillna(0, downcast='infer')
 
-    # Create points dictionary and then map adj_pos values to each point total
-    points = create_pts_dict()
-    df['pts_normal'] = df['adj_pos'].map(points['normal'])
-    df['pts_udog'] = df['adj_pos'].map(points['udog'])
+        # Create points dictionary and then map adj_pos values to each point total
+        points = create_pts_dict()
+        df['pts_normal'] = df['adj_pos'].map(points['normal'])
+        df['pts_udog'] = df['adj_pos'].map(points['udog'])
 
-    # When these filters are true, don't change values; if not true, set value to 0
-    filter1 = df['UD'] == 'Yes'
-    filter2 = df['adj_pos'] <= 10
-    df['pts_udog'] = df.pts_udog.where(filter1 & filter2, 0)
+        # When these filters are true, don't change values; if not true, set value to 0
+        filter1 = df['udog'] == 'Yes'
+        filter2 = df['adj_pos'] <= 10
+        df['pts_udog'] = df.pts_udog.where(filter1 & filter2, 0)
 
-    # Find max points between udog and normal point totals, then drop unused columns
-    df['pts'] = df[['pts_normal', 'pts_udog']].max(axis=1)
-    df = df.drop(['Name', 'pts_normal', 'pts_udog', 'adj_pos'], axis=1)  # 
-    df = df.fillna(0, downcast='infer')
+        # Find max points between udog and normal point totals, then drop unused columns
+        df['pts'] = df[['pts_normal', 'pts_udog']].max(axis=1)
+        df = df.drop(['Name', 'pts_normal', 'pts_udog', 'adj_pos'], axis=1)  #
+        df = df.fillna(0, downcast='infer')
 
-    #     df.sort_values(by=['pts', 'name'], ascending=[False, True])
-    df.style.hide_index()
+        #     df.sort_values(by=['pts', 'name'], ascending=[False, True])
+        df.style.hide_index()
 
     # Upload combined LiveTiming dataframe to Google Sheets
     client = pygsheets.authorize(no_cache=True)
@@ -282,7 +282,7 @@ if __name__ == "__main__":
     x = 1
     while x < 100:
         print(f"Downloading live timing data, update #{x}.")
-        comb_live_timing_to_sheets(sheet='live_timing')
+        comb_df = comb_live_timing_to_sheets(sheet='live_timing')
 
         # Test Announcements.json for race being complete
         announcements = get_announcements()  # Returns JSON object
@@ -291,9 +291,10 @@ if __name__ == "__main__":
         complete_str = 'Session Complete'  # Search in M keys
         event_list = announcements['B']
         for event in event_list:
-            print(event)
             if complete_str in event['M']:
-                comb_live_timing_to_sheets(sheet=race)
+                comb_live_timing_to_sheets(sheet=race, data=comb_df)
+            else:
+                pass
 
         time.sleep(30)
         x += 1
