@@ -293,8 +293,6 @@ if __name__ == "__main__":
         for event in event_list:
             if complete_str in event['M']:
                 comb_live_timing_to_sheets(sheet=race, data=comb_df)
-            else:
-                pass
 
         time.sleep(30)
         x += 1
