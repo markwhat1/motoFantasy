@@ -193,7 +193,10 @@ def get_announcements():
 
 
 def comb_live_timing_to_sheets(sheet, data=None):
-    if data:
+    print(data)
+    if data.any(0):
+        print(data)
+        print(type(data))
         df = data
     else:
         df_live = get_live_timing()
@@ -236,7 +239,7 @@ def comb_live_timing_to_sheets(sheet, data=None):
     ss = client.open('2020 fantasy supercross')
     wks = ss.worksheet_by_title(sheet)
     wks.set_dataframe(df, (1, 1))  # Live timing table
-    return df.style.hide_index()
+    return df
 
 
 def format_name(df_column):
@@ -287,6 +290,7 @@ if __name__ == "__main__":
         event_list = announcements['B']
         for event in event_list:
             if complete_str in event['M']:
+                print(f'{race} has completed. Saving copy of live timing to separate sheet.')
                 comb_live_timing_to_sheets(sheet=race, data=comb_df)
 
         time.sleep(30)
