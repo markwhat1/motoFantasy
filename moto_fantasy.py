@@ -240,6 +240,9 @@ def comb_live_timing_to_sheets(sheet, data=None):
 
 
 def format_name(df_column):
+    """
+    :df: DataSeries:
+    """
     df = pd.Series(df_column).to_frame(name='name')
     splits = df['name'].str.split(' ')
     df['last'] = splits.str[1]
