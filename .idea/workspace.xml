@@ -4,7 +4,9 @@
     <option name="SCOPE_TYPE" value="3" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0c722640-7be5-4480-8449-9dd10d8d8629" name="Default" comment="Add logic to check if race is complete and save results to separate Google Sheet" />
+    <list default="true" id="0c722640-7be5-4480-8449-9dd10d8d8629" name="Default" comment="Fixed merging previous commitments">
+      <change beforePath="$PROJECT_DIR$/moto_fantasy.py" beforeDir="false" afterPath="$PROJECT_DIR$/moto_fantasy.py" afterDir="false" />
+    </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -295,7 +297,7 @@
       <workItem from="1577935161828" duration="17939000" />
       <workItem from="1578059435181" duration="3406000" />
       <workItem from="1578173931294" duration="9936000" />
-      <workItem from="1578252422099" duration="7441000" />
+      <workItem from="1578252422099" duration="7693000" />
     </task>
     <task id="LOCAL-00001" summary="Updates">
       <created>1500848303160</created>
@@ -353,7 +355,14 @@
       <option name="project" value="LOCAL" />
       <updated>1578632497152</updated>
     </task>
-    <option name="localTasksCounter" value="9" />
+    <task id="LOCAL-00009" summary="Fixed merging previous commitments">
+      <created>1578632788697</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1578632788697</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
     <servers />
   </component>
   <component name="TodoView">
@@ -404,7 +413,8 @@
     <MESSAGE value="Improved function flow" />
     <MESSAGE value="Finally got Google Sheets update working for MF rider lists and Live Timing import" />
     <MESSAGE value="Add logic to check if race is complete and save results to separate Google Sheet" />
-    <option name="LAST_COMMIT_MESSAGE" value="Add logic to check if race is complete and save results to separate Google Sheet" />
+    <MESSAGE value="Fixed merging previous commitments" />
+    <option name="LAST_COMMIT_MESSAGE" value="Fixed merging previous commitments" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
