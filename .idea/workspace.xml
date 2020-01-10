@@ -5,6 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0c722640-7be5-4480-8449-9dd10d8d8629" name="Default" comment="Fixed merging previous commitments">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/live_timing.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/motoFantasy-sheets.py" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/moto_fantasy.py" beforeDir="false" afterPath="$PROJECT_DIR$/moto_fantasy.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -297,7 +300,7 @@
       <workItem from="1577935161828" duration="17939000" />
       <workItem from="1578059435181" duration="3406000" />
       <workItem from="1578173931294" duration="9936000" />
-      <workItem from="1578252422099" duration="7693000" />
+      <workItem from="1578252422099" duration="8153000" />
     </task>
     <task id="LOCAL-00001" summary="Updates">
       <created>1500848303160</created>
@@ -362,7 +365,14 @@
       <option name="project" value="LOCAL" />
       <updated>1578632788697</updated>
     </task>
-    <option name="localTasksCounter" value="10" />
+    <task id="LOCAL-00010" summary="Fixed merging previous commitments">
+      <created>1578632837945</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1578632837945</updated>
+    </task>
+    <option name="localTasksCounter" value="11" />
     <servers />
   </component>
   <component name="TodoView">
