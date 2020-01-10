@@ -1,0 +1,16 @@
+[motocross_fantasy]
+series = sx
+mf_url = https://www.motocrossfantasy.com
+leagueID = 0000
+username = username
+password = password
+
+[supercross_races]
+main_450_str = 450SX Main Event
+main_250_str = 250SX Main Event
+heat1_450_str = 450SX Heat #1
+heat2_450_str = 450SX Heat #2
+heat1_250_str = 250SX Heat #1
+heat2_250_str = 250SX Heat #2
+lcq_450_str = 450SX LCQ
+lcq_250_str = 250SX LCQ

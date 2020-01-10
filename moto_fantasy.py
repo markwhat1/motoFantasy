@@ -101,11 +101,11 @@ def mf_rider_tables(ses):
     df_riders.drop(df_riders.columns[1], axis=1, inplace=True)
 
     # Rename columns to logical headers
-    cols = ['Class', 'Name', 'HC', 'LF', 'UD']
+    cols = ['class', 'mf_name', 'hc', 'lf', 'udog']
 
     if len(df_riders.columns) == 5:
         df_riders.columns = cols
-        df_riders['Name'] = format_name(df_riders['Name'])
+        df_riders['mf_name'] = format_name(df_riders['mf_name'])
     else:
         print("Rider columns could not be found.")
 
@@ -135,8 +135,8 @@ def rider_list_to_sheets(rider_list):
     wks.clear(start='B1')
     wks.set_dataframe(rider_list, (3, 1))
 
-    # df_450 = rider_list[rider_list['Class'] == 450]
-    # df_250 = rider_list[rider_list['Class'] == 250]
+    # df_450 = rider_list[rider_list['class'] == 450]
+    # df_250 = rider_list[rider_list['class'] == 250]
     #
     # wks_450 = ss.worksheet_by_title('450_riders')
     # wks_450.clear()
@@ -200,13 +200,13 @@ def comb_live_timing_to_sheets(sheet, data=None):
         df_rider = mf_master()
 
         # Keep only needed columns from rider lists
-        df_rider = df_rider[['Name', 'hc', 'udog']]
-        df_rider['Name'] = df_rider['Name'].str.replace('McAdoo', 'Mcadoo')
-        df_rider['Name'] = df_rider['Name'].str.replace('DeCotis', 'Decotis')
+        df_rider = df_rider[['mf_name', 'hc', 'udog']]
+        df_rider['mf_name'] = df_rider['mf_name'].str.replace('McAdoo', 'Mcadoo')
+        df_rider['mf_name'] = df_rider['mf_name'].str.replace('DeCotis', 'Decotis')
 
         # Merge LiveTiming and rider lists on name columns
         # Left keeps all rows from live_timing, even if no matches found
-        df = df_live.merge(df_rider, how='left', left_on='name', right_on='Name')
+        df = df_live.merge(df_rider, how='left', left_on='name', right_on='mf_name')
 
         # Calc adjusted position, then set any 0 values to 1 as you can't finish less than 1
         df['adj_pos'] = df['pos'] - df['hc']
@@ -225,7 +225,7 @@ def comb_live_timing_to_sheets(sheet, data=None):
 
         # Find max points between udog and normal point totals, then drop unused columns
         df['pts'] = df[['pts_normal', 'pts_udog']].max(axis=1)
-        df = df.drop(['Name', 'pts_normal', 'pts_udog', 'adj_pos'], axis=1)  #
+        df = df.drop(['mf_name', 'pts_normal', 'pts_udog', 'adj_pos'], axis=1)  #
         df = df.fillna(0, downcast='infer')
 
         #     df.sort_values(by=['pts', 'name'], ascending=[False, True])
@@ -240,9 +240,6 @@ def comb_live_timing_to_sheets(sheet, data=None):
 
 
 def format_name(df_column):
-    """
-    df_column: DataSeries
-    """
     df = pd.Series(df_column).to_frame(name='name')
     splits = df['name'].str.split(' ')
     df['last'] = splits.str[1]
@@ -264,9 +261,9 @@ def create_pts_dict():
 
     dict_pos = dict(zip(range(1, len(pts) + 1), pts))
     dict_pos_udog = dict_pos.copy()
-    for x in dict_pos_udog.keys():
-        if x <= 10:
-            dict_pos_udog[x] *= 2
+    for i in dict_pos_udog.keys():
+        if i <= 10:
+            dict_pos_udog[i] *= 2
     dict_pts = dict()
     dict_pts['normal'] = dict_pos
     dict_pts['udog'] = dict_pos_udog

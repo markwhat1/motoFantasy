@@ -126,3 +126,4 @@ $RECYCLE.BIN/
 *.iml
 .cprestoretmp812526730384426503
 *.xml
+/config.ini
