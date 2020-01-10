@@ -1,19 +1,24 @@
 import json
 import re
 import time
+from configparser import ConfigParser
 
 import pandas as pd
 import pygsheets
 import requests
 from bs4 import BeautifulSoup
 
-# MotocrossFantasy.com variables and URLs
-series = 'sx'
-leagueID = 4370
-username = 'markwhat'
-password = 'bea1+9-@oD4YBKE7sdbX'
+# Load config.ini
+parser = ConfigParser()
+parser.read('config.ini')
 
-mf_url_base = 'https://www.motocrossfantasy.com'
+# MotocrossFantasy.com variables and URLs
+series = parser.get('motocross_fantasy', 'series')
+leagueID = parser.get('motocross_fantasy', 'leagueID')
+username = parser.get('motocross_fantasy', 'username')
+password = parser.get('motocross_fantasy', 'password')
+
+mf_url_base = parser.get('motocross_fantasy', 'mf_url')
 mf_url_status = f"{mf_url_base}/user/team-status"
 mf_url_team_standings = f"{mf_url_base}/user/bench-racing-divisions/{leagueID}"
 mf_url_week_standings = f"{mf_url_base}/user/weekly-standings/{leagueID}"
@@ -23,16 +28,6 @@ mf_url_top_picks = f"{mf_url_base}/user/top-picks/2020-SX"
 # Live timing JSON URL
 live_url = f"http://americanmotocrosslive.com/xml/{series.lower()}/RaceResults.json"
 announce_url = f"http://americanmotocrosslive.com/xml/{series.lower()}/Announcements.json"
-
-# Supercross Race List
-main_450_str = '450SX Main Event'
-main_250_str = '250SX Main Event'
-heat1_250_str = '250SX Heat #1'
-heat2_250_str = '250SX Heat #2'
-heat1_450_str = '450SX Heat #1'
-heat2_450_str = '450SX Heat #2'
-lcq_250_str = '250SX LCQ'
-lcq_450_str = '450SX LCQ'
 
 
 def mf_master():
@@ -291,6 +286,7 @@ if __name__ == "__main__":
         event_list = announcements['B']
         for event in event_list:
             if complete_str in event['M']:
+                print(event['M'])
                 comb_live_timing_to_sheets(sheet='live_timing')
                 comb_live_timing_to_sheets(sheet=race)
             else:
