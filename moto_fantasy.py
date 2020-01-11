@@ -37,19 +37,15 @@ def mf_master():
     with requests.Session() as s:
         s.post(mf_url_base, data=payload)
 
-        # Get current week header from status page to see if update required
+        # Check for presence of Pick Rider links, and download tables if present, otherwise load csv file
         html = s.get(mf_url_status).content
         soup = BeautifulSoup(html, 'lxml')
-        status_header = soup.h3.get_text()
-        status = status_header.split(': ', 1)[1]
-        print(f'"{status}" is the current status.')
-
-        # Check if status is the same or if rider lists need to be updated
-        if check_sheets_update(status):
+        rider_links = soup.find_all('a', href=re.compile('pick-riders'))
+        if rider_links:
             riders = mf_rider_tables(s)
             rider_list_to_sheets(riders)
         else:
-            riders = pd.read_csv('rider_lists.csv')
+            riders = pd.read_csv('data/rider_lists.csv')
     return riders
 
 
@@ -82,14 +78,11 @@ def mf_rider_tables(ses):
         # Use prettify() to feed html into pandas
         rider_tables = pd.read_html(table.prettify(), flavor='bs4')
 
-        # Print number of tables found
-        print(f"{len(rider_tables)} {div} class table(s) were found!")
-
         # read_html returns list of DataFrames, only need first one
         df_table = rider_tables[0]
 
         # Add Class column to beginning of DataFrame
-        df_table.insert(0, "Class", div, allow_duplicates=True)
+        df_table.insert(0, 'class', div, allow_duplicates=True)
 
         # Merge rider lists
         rider_lists.append(df_table)
@@ -109,12 +102,12 @@ def mf_rider_tables(ses):
     else:
         print("Rider columns could not be found.")
 
-    df_riders.to_csv('rider_lists.csv', index=False)
+    df_riders.to_csv('data/rider_lists.csv', index=False)
     return df_riders
 
 
 def check_sheets_update(status):
-    client = pygsheets.authorize(no_cache=True)
+    client = pygsheets.authorize(client_secret='auth/client_secret.json')
     ss = client.open('2020 fantasy supercross')
 
     wks = ss.worksheet_by_title('update')
@@ -128,9 +121,8 @@ def check_sheets_update(status):
 
 
 def rider_list_to_sheets(rider_list):
-    client = pygsheets.authorize(no_cache=True)
+    client = pygsheets.authorize(client_secret='auth/client_secret.json')
     ss = client.open('2020 fantasy supercross')
-
     wks = ss.worksheet_by_title('rider_list')
     wks.clear(start='B1')
     wks.set_dataframe(rider_list, (3, 1))
@@ -160,7 +152,7 @@ def get_live_timing():
     df_live_timing['name'] = format_name(df_live_timing['name'])
 
     # Save live timing DataFrame to CSV
-    df_live_timing.to_csv('live_timing.csv', index=False)
+    df_live_timing.to_csv('data/live_timing.csv', index=False)
 
     # Assemble current race information
     # status = live_timing['A']
@@ -174,7 +166,7 @@ def get_live_timing():
     #     short_moto_name = long_moto_name.split('Class ', 1)[1]
     #     division = long_moto_name.split('Class ', 1)[0]
     #
-    # client = pygsheets.authorize(no_cache=True)
+    # client = pygsheets.authorize(client_secret='auth/client_secret.json')
     # ss = client.open('2020 fantasy supercross')
     # wks = ss.worksheet_by_title('live_timing')
     #
@@ -193,12 +185,7 @@ def get_announcements():
 
 
 def comb_live_timing_to_sheets(sheet, data=None):
-    print(data)
-    if data.any(0):
-        print(data)
-        print(type(data))
-        df = data
-    else:
+    if data is None:
         df_live = get_live_timing()
         df_rider = mf_master()
 
@@ -230,14 +217,17 @@ def comb_live_timing_to_sheets(sheet, data=None):
         df['pts'] = df[['pts_normal', 'pts_udog']].max(axis=1)
         df = df.drop(['mf_name', 'pts_normal', 'pts_udog', 'adj_pos'], axis=1)  #
         df = df.fillna(0, downcast='infer')
-
-        #     df.sort_values(by=['pts', 'name'], ascending=[False, True])
         df.style.hide_index()
 
+        # df.sort_values(by=['pts', 'name'], ascending=[False, True])
+    else:
+        df = data
+
     # Upload combined LiveTiming dataframe to Google Sheets
-    client = pygsheets.authorize(no_cache=True)
+    client = pygsheets.authorize(client_secret='auth/client_secret.json')
     ss = client.open('2020 fantasy supercross')
     wks = ss.worksheet_by_title(sheet)
+    wks.clear(start='A1')
     wks.set_dataframe(df, (1, 1))  # Live timing table
     return df
 
@@ -280,19 +270,20 @@ if __name__ == "__main__":
     x = 1
     while x < 100:
         print(f"Downloading live timing data, update #{x}.")
-        comb_df = comb_live_timing_to_sheets(sheet='live_timing')
+        comb_df = comb_live_timing_to_sheets(sheet='live_timing', data=None)
 
         # Test Announcements.json for race being complete
         announcements = get_announcements()  # Returns JSON object
         race = announcements['S'].split(' - ')[0]  # Returns race title only
-
-        complete_str = 'Session Complete'  # Search in M keys
-        event_list = announcements['B']
-        for event in event_list:
-            if complete_str in event['M']:
-                print(f'{race} has completed. Saving copy of live timing to separate sheet.')
-                comb_live_timing_to_sheets(sheet=race, data=comb_df)
+        valid_races = ['450SX Main Event', '250SX Main Event', '250SX Heat #1', '250SX Heat #2', '450SX Heat #1',
+                       '450SX Heat #2', '250SX LCQ', '450SX LCQ']
+        if race in valid_races:
+            complete_str = 'Session Complete'  # Search in M keys
+            event_list = announcements['B']
+            for event in event_list:
+                if complete_str in event['M']:
+                    print(f'{race} has completed. Saving copy of live timing to separate sheet.')
+                    comb_live_timing_to_sheets(sheet=race, data=comb_df)
 
         time.sleep(30)
         x += 1
-
