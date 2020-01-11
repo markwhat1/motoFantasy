@@ -1,6 +1,6 @@
 __pycache__/values.cpython-36.pyc
-/sheets.googleapis.com-python.json
-/client_secret.json
+/auth/sheets.googleapis.com-python.json
+/auth/client_secret.json
 .idea/codeStyleSettings.xml
 __pycache__/
 requests_demo.py
