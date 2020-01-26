@@ -36,20 +36,23 @@ def mf_master():
 
     # Use 'with' to ensure the session context is closed after use.
     with requests.Session() as s:
-        s.post(mf_url_base, data=payload)
+        # s.post(mf_url_base, data=payload)
 
         # Check for presence of Pick Rider links, and download tables if present, otherwise load csv file
         # TO DO find text from pick-riders link that says "Waiting For Rider List"
-        html = s.get(mf_url_status).content
-        soup = BeautifulSoup(html, 'lxml')
-        rider_links = soup.find('a', href=re.compile('pick-riders'))
-        link_text = rider_links.string
+        # html = s.get(mf_url_status).content
+        # soup = BeautifulSoup(html, 'lxml')
+        # rider_links = soup.find('a', href=re.compile('pick-riders'))
+        # print(rider_links)
+        # print(type(rider_links))
+        # link_text = rider_links.string
+        # print(link_text)
 
-        if "Waiting For Rider List" in link_text:
-            riders = pd.read_csv('data/rider_lists.csv')
-        else:
-            riders = mf_rider_tables(s)
-            rider_list_to_sheets(riders)
+        # if "Waiting For Rider List" in link_text:
+        riders = pd.read_csv('data/rider_lists.csv')
+        # else:
+        #     riders = mf_rider_tables(s)
+        #     rider_list_to_sheets(riders)
     return riders
 
 
@@ -81,7 +84,7 @@ def mf_rider_tables(ses):
 
         # Use prettify() to feed html into pandas
         # rider_tables = pd.read_html(table.prettify(), flavor='bs4')
-        rider_tables = pd.read_html(table, flavor='bs4')
+        rider_tables = pd.read_html(str(table), flavor='bs4')
 
         # read_html returns list of DataFrames, only need first one
         df_table = rider_tables[0]
@@ -154,7 +157,7 @@ def get_live_timing():
 
     df_live_timing = pd.DataFrame.from_records(live_timing['B'], columns=list(column_names.keys()))
     df_live_timing.rename(columns=column_names, inplace=True)
-    df_live_timing['name'] = format_name(df_live_timing['name'])
+    df_live_timing['name_formatted'] = format_name(df_live_timing['name'])
 
     # Save live timing DataFrame to CSV
     df_live_timing.to_csv('data/live_timing.csv', index=False)
@@ -184,6 +187,19 @@ def get_live_timing():
 
 
 def get_announcements():
+    # TO DO: Need to catch JSON errors as they come
+    #   Traceback (most recent call last):
+    # File "C:/Users/markw/PycharmProjects/mx_fantasy/moto_fantasy.py", line 301, in <module>
+    #   announcements = get_announcements()  # Returns JSON object
+    # File "C:/Users/markw/PycharmProjects/mx_fantasy/moto_fantasy.py", line 191, in get_announcements
+    #   announce = json.loads(r.text)
+    # File "c:\users\markw\anaconda3\Lib\json\__init__.py", line 348, in loads
+    #   return _default_decoder.decode(s)
+    # File "c:\users\markw\anaconda3\Lib\json\decoder.py", line 337, in decode
+    #   obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+    # File "c:\users\markw\anaconda3\Lib\json\decoder.py", line 355, in raw_decode
+    #   raise JSONDecodeError("Expecting value", s, err.value) from None
+    #       json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
     r = requests.get(announce_url)
     announce = json.loads(r.text)
     return announce
@@ -201,7 +217,7 @@ def comb_live_timing_to_sheets(sheet, data=None):
 
         # Merge LiveTiming and rider lists on name columns
         # Left keeps all rows from live_timing, even if no matches found
-        df = df_live.merge(df_rider, how='left', left_on='name', right_on='mf_name')
+        df = df_live.merge(df_rider, how='left', left_on='name_formatted', right_on='mf_name')
 
         # Calc adjusted position, then set any 0 values to 1 as you can't finish less than 1
         df['adj_pos'] = df['pos'] - df['hc']
@@ -232,8 +248,8 @@ def comb_live_timing_to_sheets(sheet, data=None):
     client = pygsheets.authorize(client_secret='auth/client_secret.json')
     ss = client.open('2020 fantasy supercross')
     wks = ss.worksheet_by_title(sheet)
-    wks.clear(start='A1')
-    wks.set_dataframe(df, (1, 1))  # Live timing table
+    wks.clear(start='A2', end='L100')
+    wks.set_dataframe(df, (2, 1))  # Live timing table to cell A2
     return df
 
 
@@ -272,13 +288,16 @@ def create_pts_dict():
 
 
 def fix_race_name(event_str):
-    event_str = event_str.split(' - ')[0]  # Returns race title only
-    event_str = re.sub(" [0-9]{1,2} Minute.*", "", event_str)
-    # race = re.sub("([0-9]{3}) SX", "\1SX", race)
-    event_str = race.replace('250 SX', '250SX')
-    event_str = race.replace('450 SX', '450SX')
-    event_str = race.replace('450 Main', '450SX Main')
-    event_str = race.replace('Last Chance Qualifier', 'LCQ')
+    event_str = event_str.replace('Last Chance Qualifier', 'LCQ')
+    if 'Heat' in event_str:
+        event_str = re.sub("(\d{3}).*(Heat).*?#(\d).*", "\g<1> \g<2> \#\g<3>", event_str)  # Make sure SX is in name
+    elif 'LCQ' in event_str:
+        event_str = re.sub("(\d{3}).*(LCQ).*", "\g<1> \g<2>", event_str)  # Make sure SX is in name
+    elif 'Main Event' in event_str:
+        event_str = re.sub("(\d{3}).*(Main Event).*", "\g<1> \g<2>", event_str)  # Make sure SX is in name
+    # event_str = re.sub("\s+", " ", event_str)
+    # event_str = re.sub("\s[0-9]{1,2}\sMinute.*", "", event_str)  # Remove ## Minutes Plus 1 Lap text
+    # event_str = re.sub("([0-9]{3})(\s?S?X?)(.*)", "\g<1>SX \g<3>", event_str)  # Make sure SX is in name
     return event_str
 
 
@@ -294,6 +313,7 @@ if __name__ == "__main__":
         # Test Announcements.json for race being complete
         announcements = get_announcements()  # Returns JSON object
         race = announcements['S']
+        print(race)
         race = fix_race_name(race)
 
         # Save current race to Google Sheets
@@ -304,8 +324,8 @@ if __name__ == "__main__":
 
         print(f"{timestamp}: Downloading live timing data for the {race}.")
 
-        valid_races = ['450SX Main Event', '250SX Main Event', '250SX Heat #1', '250SX Heat #2', '450SX Heat #1',
-                       '450SX Heat #2', '250SX LCQ', '450SX LCQ']
+        valid_races = ['450 Main Event', '250 Main Event', '250 Heat #1', '250 Heat #2', '450 Heat #1',
+                       '450 Heat #2', '250 LCQ', '450 LCQ']
         if race not in valid_races:
             print(f'"{race}" name will need to be corrected to successfully save results.')
         else:
