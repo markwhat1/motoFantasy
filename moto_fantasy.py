@@ -39,9 +39,14 @@ announce_url = f"http://americanmotocrosslive.com/xml/{series.lower()}/Announcem
 # Google Sheet workbook
 workbook = '2020 fantasy supercross'
 
+# Data files
+race_log = 'data/race_log.txt'
+comp_race_log = 'data/comp_race_log.txt'
+rider_list_dir = 'data/rider_lists.csv'
+live_timing_dir = 'data/live_timing.csv'
+
 
 def mf_master():
-    rider_list_dir = 'data/rider_lists.csv'
     payload = {'login_username': username, 'login_password': password, 'login': 'true'}
 
     # Get file modification date and check if it was modified today
@@ -51,17 +56,24 @@ def mf_master():
         print('Returning rider_lists from csv file.')
         return pd.read_csv(rider_list_dir)
     else:
-        print('Checking if updated rider list is available...')
+        print('Checking if updated rider lists is available...')
 
         # Use 'with' to ensure the session context is closed after use.
         with requests.Session() as s:
             s.post(mf_url_base, data=payload)
 
-            # Check for presence of Pick Rider links, and download tables if present, otherwise load csv file
-            # TO DO find text from pick-riders link that says "Waiting For Rider List"
+            html = s.get(mf_url_top_picks).text
+            rider_tables_test = pd.read_html(html)
+            print(rider_tables_test)
+            print(type(rider_tables_test))
+
+            # Get rider list url contents to check
             resp = s.get(mf_url_status)
-            # Make sure username is in html to verify login was successful
+
+            # Make sure username is in html to verify login was successful, else show error message
             assert username in resp.text, 'It appears authentication was unsuccessful.'
+
+            # Check if "Waiting For Rider List" present or if rider lists are available
             if "Waiting For Rider List" in resp.text:
                 print('Rider lists are not currently available for download, loading lists from file.')
                 return pd.read_csv(rider_list_dir)
@@ -70,41 +82,17 @@ def mf_master():
                 return get_mf_rider_tables(s, data_dir=rider_list_dir)
 
 
-def get_mf_table_urls(ses):
-    """
-    Returns rider table list from 'motocrossfantasy.com'
-    division = 450 or 250 only
-    """
-    html = ses.get(mf_url_status).content
-    soup = BeautifulSoup(html, 'lxml')
-
-    table_urls = []
-    for link in soup.find_all('a', href=re.compile('pick-riders')):
-        table_urls.append(link['href'])
-
-    divisions = [450, 250]
-    div_dict = {k: v for (k, v) in zip(divisions, table_urls)}
-    return div_dict
-
-
 def get_mf_rider_tables(ses, data_dir):
     rider_urls = get_mf_table_urls(ses)
 
     rider_lists = []
     for div in rider_urls.keys():
+        # Get rider list html and read into pandas DataFrame
+        # read_html returns list of DataFrames if multiple tables are found
         html = ses.get(rider_urls.get(div)).text
-        rider_tables_test = pd.read_html(html)
-        print(rider_tables_test)
-        print(type(rider_tables_test))
-        table = ''
+        rider_tables = pd.read_html(html)
 
-        # html = ses.get(rider_urls.get(div)).content
-        # soup = BeautifulSoup(html, 'lxml')
-        # table = soup.find('table')
-        if table:
-            # read_html requires html in string format
-            rider_tables = pd.read_html(str(table), flavor='bs4')
-
+        if rider_tables:
             # read_html returns list of DataFrames, only need first one
             df_table = rider_tables[0]
 
@@ -133,52 +121,65 @@ def get_mf_rider_tables(ses, data_dir):
     return df_riders
 
 
-def google_wks(workbook, worksheet):
+def get_mf_table_urls(ses):
+    """
+    Returns rider table list from 'motocrossfantasy.com'
+    division = 450 or 250 only
+    """
+    html = ses.get(mf_url_status).content
+    soup = BeautifulSoup(html, 'lxml')
+
+    table_urls = []
+    for link in soup.find_all('a', href=re.compile('pick-riders')):
+        table_urls.append(link['href'])
+
+    divisions = [450, 250]
+    div_dict = {k: v for (k, v) in zip(divisions, table_urls)}
+    return div_dict
+
+
+def google_wks(wb, ws):
     g = pygsheets.authorize(client_secret='auth/client_secret.json')
-    w = g.open(workbook)
-    return w.worksheet_by_title(worksheet)
+    w = g.open(wb)
+    return w.worksheet_by_title(ws)
 
 
 def rider_list_to_sheets(rider_list):
-    s = google_wks(workbook=workbook, worksheet='rider_list')
+    s = google_wks(wb=workbook, ws='rider_list')
     s.clear(start='B1')
     s.set_dataframe(rider_list, (3, 1))
     return
 
 
-def get_live_timing_table(num_retries=3):
-    for attempt_no in range(num_retries):
+def get_live_timing_table():
+    while True:
         try:
             r = requests.get(live_url)
             live_timing = json.loads(r.text)
-
-            # New column names in dictionary for replacement
-            column_names = {'A': 'pos', 'F': 'name', 'N': 'num', 'L': 'laps', 'G': 'gap', 'D': 'diff', 'BL': 'bestlap',
-                            'LL': 'lastlap', 'S': 'status'}
-
-            df_live_timing = pd.DataFrame.from_records(live_timing['B'], columns=list(column_names.keys()))
-            df_live_timing.rename(columns=column_names, inplace=True)
-            df_live_timing['name_formatted'] = format_name(df_live_timing['name'])
-
-            # Save live timing DataFrame to CSV
-            df_live_timing.to_csv('data/live_timing.csv', index=False)
-            return df_live_timing
         except ValueError as error:  # ValueError includes json.decoder.JSONDecodeError
-            if attempt_no < (num_retries - 1):
-                print(f'Error: {error}')
-            else:
-                raise error
+            print(f'Error: {error}')
+        break
+
+    # New column names in dictionary for replacement
+    column_names = {'A': 'pos', 'F': 'name', 'N': 'num', 'L': 'laps', 'G': 'gap', 'D': 'diff', 'BL': 'bestlap',
+                    'LL': 'lastlap', 'S': 'status'}
+
+    df_live_timing = pd.DataFrame.from_records(live_timing['B'], columns=list(column_names.keys()))
+    df_live_timing.rename(columns=column_names, inplace=True)
+    df_live_timing['name_formatted'] = format_name(df_live_timing['name'])
+
+    # Save live timing DataFrame to CSV
+    df_live_timing.to_csv(live_timing_dir, index=False)
+    return df_live_timing
 
 
-def get_announcements(num_retries=3):
+def get_announcements():
     while True:
-        # for attempt_no in range(num_retries):
         try:
             r = requests.get(announce_url)
             announce = json.loads(r.text)  # return announce
         except ValueError as error:  # ValueError includes json.decoder.JSONDecodeError
-            # if attempt_no < (num_retries - 1):
-            print(f'Error: {error}')  # else:  #     raise error
+            print(f'Error: {error}')
         else:
             break
 
@@ -223,7 +224,7 @@ def comb_live_timing_to_sheets(sheet, data=None):
         df.style.hide_index()
 
     # Upload combined LiveTiming dataframe to Google Sheets
-    lt_sheet = google_wks(workbook=workbook, worksheet=sheet)
+    lt_sheet = google_wks(wb=workbook, ws=sheet)
     lt_sheet.clear(start='A2', end='L100')
     lt_sheet.set_dataframe(df, (2, 1))  # Live timing table to cell A2
     return df
@@ -237,7 +238,7 @@ def format_name(df_column):
     splits = df['name'].str.split(' ')
     df['last'] = splits.str[1]
     df['first'] = splits.str[0]
-    df['first'] = df['first'].str.slice(0, 1) + str('.')
+    df['first'] = df['first'].str.slice(0, 2) + str('.')
     df['name'] = df['last'].str.cat(df['first'], sep=', ')
     df = df.loc[:, 'name']
     return df
@@ -273,9 +274,6 @@ def fix_race_name(event_str):
         event_str = re.sub("(\d{3}).*(Main Event).*?#([0-9]).*", "\g<1> \g<2> #\g<3>", event_str)
     elif 'Main Event' in event_str:
         event_str = re.sub("(\d{3}).*(Main Event).*", "\g<1> \g<2>", event_str)
-    # event_str = re.sub("\s+", " ", event_str)
-    # event_str = re.sub("\s[0-9]{1,2}\sMinute.*", "", event_str)  # Remove ## Minutes Plus 1 Lap text
-    # event_str = re.sub("([0-9]{3})(\s?S?X?)(.*)", "\g<1>SX \g<3>", event_str)
     return event_str
 
 
@@ -284,86 +282,88 @@ def get_current_time():
     return date_time_obj.strftime("%I:%M:%S")
 
 
-def save_race_log(event):
-    race_log = 'data/race_log.txt'
+def is_new_race(log, cur_event):
     # Open file in append mode
-    with open(race_log, 'a+') as f:
+    with open(log, 'a+') as f:
         # Move to beginning of the file
         f.seek(0)
         # Get list of saved races by lines
         race_list = f.read().splitlines()
-        print(f'race_list: {race_list}')
+
         # Get last race from list, unless list is empty, then return null value
         if race_list:
             last_race = race_list[-1]
-        else:
-            last_race = ''
-        print(f'Last race: {last_race}')
-        if last_race == event:
-            return False
-        else:
-            f.write(f'{event}\n')
-            return True
+            if last_race == cur_event:
+                return False
+            else:
+                f.write(f'{cur_event}\n')
+                return True
 
 
-def save_current_race(event):
-    current_race_log = 'data/current_race.txt'
-    # Open file in write mode
-    with open(current_race_log, "w+") as f:
-        saved_race = f.read()
-        if saved_race == event:
-            return True
-        else:
-            f.write(event)
-            return False
+def is_comp_race(log, cur_event):
+    # Open file in append mode
+    with open(log, 'a+') as f:
+        # Move to beginning of the file
+        f.seek(0)
+        # Get list of saved races by lines
+        race_list = f.read().splitlines()
+
+        # Get last race from list, unless list is empty, then return null value
+        if race_list:
+            last_comp_race = race_list[-1]
+            if last_comp_race == cur_event:
+                return False
+            else:
+                f.write(f'{cur_event}\n')
+                return True
 
 
 if __name__ == "__main__":
     x = 1
     while x < 100:
-        comb_df = comb_live_timing_to_sheets(sheet='live_timing', data=None)
 
-        # Test Announcements.json for race being complete
+        # Fetch announcements.json for race updates
         announcements = get_announcements()  # Returns JSON object
         race = announcements['S']
         race = fix_race_name(race)
 
-        # Save current race to make decisions on how to proceed later in script
-        save_current_race(race)
-        new_race = save_race_log(race)
+        comb_df = comb_live_timing_to_sheets(sheet='live_timing', data=None)
 
-        # Log all race names to file
-        # new_race = True if new race added to log and False if race already added
-        new_race = False
-        race_saved = False
-        while race_saved is False:
-            complete_str = 'Session Complete'  # Search in M keys
-            event_list = announcements['B']
-            for event in event_list:
-                if complete_str in event['M']:
-                    print(f'{race} has completed. Saving copy of live timing.')
-                    comb_live_timing_to_sheets(sheet=race, data=comb_df)
-                    race_saved = True
+        # Log active race and return True/False if race had already started
+        race_new = is_new_race(log=race_log, cur_event=race)
 
-        # Save current race to Google Sheets
-        wks = google_wks(workbook=workbook, worksheet='update')
+        # Log completed race
+        # Return True if race already completed; False if race had already completed
+        race_complete = is_comp_race(log=comp_race_log, cur_event=race)
+
+# List of possible race statuses
+# new_race = True, comp_race = False -> update current race; update live_timing
+# new_race = False, comp_race = False -> don't update current race; update live_timing
+# new_race = False, comp_race = True -> don't update current race; update live_timing; save live_timing
+# new_race = False, comp_race = False -> don't update current race; update live_timing; don't save live_timing
+
+        # Save current race to Google Sheets 'update' worksheet
+        wks = google_wks(wb=workbook, ws='update')
         wks.cell('A2').set_text_format('bold', True).value = race
-
-        timestamp = get_current_time()
-        print(f"{timestamp}: Downloading live timing data for {race}.")
 
         valid_races = ['450 Main Event', '450 Main Event #1', '450 Main Event #2', '450 Main Event #3',
                        '250 Main Event', '250 Main Event #1', '250 Main Event #2', '250 Main Event #3', '250 Heat #1',
                        '250 Heat #2', '450 Heat #1', '450 Heat #2', '250 LCQ', '450 LCQ']
-        if race not in valid_races:
-            print(f'"{race}" name will need to be corrected to successfully save results.')
+        if race in valid_races:
+            race_saved = False
+            while race_saved is False:
+                event_list = announcements['B']  # Returns list of events from announcements json
+                complete_str = 'Session Complete'  # Search in M keys
+                for event in event_list:
+                    if complete_str in event['M']:
+                        complete_time = event['TT']
+                        print(f'{race} completed at {complete_time}. Saving copy of live timing.')
+                        comb_live_timing_to_sheets(sheet=race, data=comb_df)
+                        race_saved = True
         else:
-            complete_str = 'Session Complete'  # Search in M keys
-            event_list = announcements['B']
-            for event in event_list:
-                if complete_str in event['M']:
-                    print(f'{race} has completed. Saving copy of live timing.')
-                    comb_live_timing_to_sheets(sheet=race, data=comb_df)
+            print(f'"{race}" name will need to be corrected to successfully save results.')
+        timestamp = get_current_time()
+        print(f"{timestamp}: Downloading live timing data for {race}.")
 
         time.sleep(30)
         x += 1
