@@ -4,6 +4,7 @@ from datetime import datetime, date
 import time
 from configparser import ConfigParser
 from pathlib import Path
+import argparse
 
 import pandas as pd
 import pygsheets
@@ -13,6 +14,9 @@ from bs4 import BeautifulSoup
 # Load config.ini
 parser = ConfigParser()
 parser.read('config.ini')
+
+# ArgParse setup
+arg_parser = argparse.ArgumentParser(description='This is a MotocrossFantasy program', )
 
 # MotocrossFantasy.com variables and URLs
 series = parser.get('motocross_fantasy', 'series')
@@ -31,6 +35,9 @@ mf_url_top_picks = f"{mf_url_base}/user/top-picks/2020-SX"
 # Live timing JSON URL
 live_url = f"http://americanmotocrosslive.com/xml/{series.lower()}/RaceResults.json"
 announce_url = f"http://americanmotocrosslive.com/xml/{series.lower()}/Announcements.json"
+
+# Google Sheet workbook
+workbook = '2020 fantasy supercross'
 
 
 def mf_master():
@@ -85,9 +92,15 @@ def get_mf_rider_tables(ses, data_dir):
 
     rider_lists = []
     for div in rider_urls.keys():
-        html = ses.get(rider_urls.get(div)).content
-        soup = BeautifulSoup(html, 'lxml')
-        table = soup.find('table')
+        html = ses.get(rider_urls.get(div)).text
+        rider_tables_test = pd.read_html(html)
+        print(rider_tables_test)
+        print(type(rider_tables_test))
+        table = ''
+
+        # html = ses.get(rider_urls.get(div)).content
+        # soup = BeautifulSoup(html, 'lxml')
+        # table = soup.find('table')
         if table:
             # read_html requires html in string format
             rider_tables = pd.read_html(str(table), flavor='bs4')
@@ -120,23 +133,16 @@ def get_mf_rider_tables(ses, data_dir):
     return df_riders
 
 
-def rider_list_to_sheets(rider_list):
-    client = pygsheets.authorize(client_secret='auth/client_secret.json')
-    ss = client.open('2020 fantasy supercross')
-    wks = ss.worksheet_by_title('rider_list')
-    wks.clear(start='B1')
-    wks.set_dataframe(rider_list, (3, 1))
+def google_wks(workbook, worksheet):
+    g = pygsheets.authorize(client_secret='auth/client_secret.json')
+    w = g.open(workbook)
+    return w.worksheet_by_title(worksheet)
 
-    # df_450 = rider_list[rider_list['class'] == 450]
-    # df_250 = rider_list[rider_list['class'] == 250]
-    #
-    # wks_450 = ss.worksheet_by_title('450_riders')
-    # wks_450.clear()
-    # wks_450.set_dataframe(df_450, (1, 1))
-    #
-    # wks_250 = ss.worksheet_by_title('250_riders')
-    # wks_250.clear()
-    # wks_250.set_dataframe(df_250, (1, 1))
+
+def rider_list_to_sheets(rider_list):
+    s = google_wks(workbook=workbook, worksheet='rider_list')
+    s.clear(start='B1')
+    s.set_dataframe(rider_list, (3, 1))
     return
 
 
@@ -169,13 +175,10 @@ def get_announcements(num_retries=3):
         # for attempt_no in range(num_retries):
         try:
             r = requests.get(announce_url)
-            announce = json.loads(r.text)
-            # return announce
+            announce = json.loads(r.text)  # return announce
         except ValueError as error:  # ValueError includes json.decoder.JSONDecodeError
             # if attempt_no < (num_retries - 1):
-            print(f'Error: {error}')
-            # else:
-            #     raise error
+            print(f'Error: {error}')  # else:  #     raise error
         else:
             break
 
@@ -220,11 +223,9 @@ def comb_live_timing_to_sheets(sheet, data=None):
         df.style.hide_index()
 
     # Upload combined LiveTiming dataframe to Google Sheets
-    client = pygsheets.authorize(client_secret='auth/client_secret.json')
-    ss = client.open('2020 fantasy supercross')
-    wks = ss.worksheet_by_title(sheet)
-    wks.clear(start='A2', end='L100')
-    wks.set_dataframe(df, (2, 1))  # Live timing table to cell A2
+    lt_sheet = google_wks(workbook=workbook, worksheet=sheet)
+    lt_sheet.clear(start='A2', end='L100')
+    lt_sheet.set_dataframe(df, (2, 1))  # Live timing table to cell A2
     return df
 
 
@@ -345,18 +346,15 @@ if __name__ == "__main__":
                     race_saved = True
 
         # Save current race to Google Sheets
-        client = pygsheets.authorize(client_secret='auth/client_secret.json')
-        ss = client.open('2020 fantasy supercross')
-        wks = ss.worksheet_by_title('update')
-        wks.update_value('A2', race)
+        wks = google_wks(workbook=workbook, worksheet='update')
+        wks.cell('A2').set_text_format('bold', True).value = race
 
         timestamp = get_current_time()
         print(f"{timestamp}: Downloading live timing data for {race}.")
 
         valid_races = ['450 Main Event', '450 Main Event #1', '450 Main Event #2', '450 Main Event #3',
-                       '250 Main Event', '250 Main Event #1', '250 Main Event #2', '250 Main Event #3',
-                       '250 Heat #1', '250 Heat #2', '450 Heat #1', '450 Heat #2',
-                       '250 LCQ', '450 LCQ']
+                       '250 Main Event', '250 Main Event #1', '250 Main Event #2', '250 Main Event #3', '250 Heat #1',
+                       '250 Heat #2', '450 Heat #1', '450 Heat #2', '250 LCQ', '450 LCQ']
         if race not in valid_races:
             print(f'"{race}" name will need to be corrected to successfully save results.')
         else:
@@ -366,6 +364,6 @@ if __name__ == "__main__":
                 if complete_str in event['M']:
                     print(f'{race} has completed. Saving copy of live timing.')
                     comb_live_timing_to_sheets(sheet=race, data=comb_df)
-        #
+
         time.sleep(30)
         x += 1
