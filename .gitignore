@@ -1,10 +1,8 @@
 __pycache__/values.cpython-36.pyc
-/auth/sheets.googleapis.com-python.json
-/auth/client_secret.json
+/auth/*.json
 .idea/codeStyleSettings.xml
 __pycache__/
-requests_demo.py
-www.motocrossfantasy.com_session.dat
+*.dat
 ### VisualStudioCode template
 .idea/
 ### Python template
