@@ -27,15 +27,15 @@ password = parser.get('motocross_fantasy', 'password')
 race_type = parser.get('motocross_fantasy', 'race_type')
 
 mf_url_base = parser.get('motocross_fantasy', 'mf_url')
-mf_url_status = f"{mf_url_base}/user/team-status"
-mf_url_team_standings = f"{mf_url_base}/user/bench-racing-divisions/{leagueID}"
-mf_url_week_standings = f"{mf_url_base}/user/weekly-standings/{leagueID}"
-mf_url_race_results = f"{mf_url_base}/user/race-results"
-mf_url_top_picks = f"{mf_url_base}/user/top-picks/2020-SX"
+mf_url_status = f'{mf_url_base}/user/team-status'
+mf_url_team_standings = f'{mf_url_base}/user/bench-racing-divisions/{leagueID}'
+mf_url_week_standings = f'{mf_url_base}/user/weekly-standings/{leagueID}'
+mf_url_race_results = f'{mf_url_base}/user/race-results'
+mf_url_top_picks = f'{mf_url_base}/user/top-picks/2020-SX'
 
 # Live timing JSON URL
-live_url = f"http://americanmotocrosslive.com/xml/{series.lower()}/RaceResults.json"
-announce_url = f"http://americanmotocrosslive.com/xml/{series.lower()}/Announcements.json"
+live_url = f'http://americanmotocrosslive.com/xml/{series.lower()}/RaceResults.json'
+announce_url = f'http://americanmotocrosslive.com/xml/{series.lower()}/Announcements.json'
 
 # Data files
 race_log = 'data/race_log.csv'
@@ -71,7 +71,7 @@ def get_mf_data():
             assert username in resp.text, 'It appears authentication was unsuccessful.'
 
             # Check if "Waiting For Rider List" present or if rider lists are available
-            if "Waiting For Rider List" in resp.text:
+            if 'Waiting For Rider List' in resp.text:
                 print('Rider lists are not currently available for download, loading lists from file.')
                 return pd.read_csv(rider_list_dir)
             else:
@@ -130,7 +130,7 @@ def get_mf_rider_tables(ses, data_dir):
         df_riders['mf_name'] = df_riders['mf_name'].str.title()
         df_riders['mf_name'] = format_name(df_riders['mf_name'])
     else:
-        print("Rider columns could not be found.")
+        print('Rider columns could not be found.')
 
     dataframe_to_sheets(df=df_riders, sheet='rider_lists')
     df_riders.to_csv(data_dir, index=False)
@@ -268,7 +268,7 @@ def fix_race_name(event_str):
 
 def get_current_time():
     date_time_obj = datetime.now()
-    return date_time_obj.strftime("%I:%M:%S")
+    return date_time_obj.strftime('%I:%M:%S')
 
 
 def log_races(event_info):
@@ -287,7 +287,7 @@ def last_race_logs():
     if len(data) > 2:
         last_logs = data[-2:]
     else:
-        last_logs = ['', '']
+        last_logs = []
         print('Insufficient data to compare.')
     print(last_logs)
     return last_logs
@@ -353,8 +353,12 @@ if __name__ == "__main__":
 
         # Get last 2 race logs to compare
         logs = last_race_logs()
-        prev_info = logs[0]
-        cur_info = logs[1]
+        if logs:
+            prev_info = logs[0]
+            cur_info = logs[1]
+        else:
+            print(f'Not enough data has been logged yet.')
+            break
 
         # RACE CHANGE?
         # If same race is continuing
