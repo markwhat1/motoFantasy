@@ -203,7 +203,7 @@ def dataframe_to_sheets(df, sheet):
     s = workbook.worksheet_by_title(sheet)
     s.clear(start='A2')
     # Set DataFrame to cell A2
-    s.set_dataframe(df, (2, 1))
+    s.set_dataframe(df, (3, 1))
     return
 
 
@@ -304,9 +304,23 @@ def race_status(announce_json):
         return s
 
 
+def clear_data_sheets():
+    all_sheets = workbook.worksheets()
+    for sheet in all_sheets:
+        if sheet.title in valid_races:
+            sheet.clear(start='A3')
+    live_sheet = workbook.worksheet_by_title('live_timing')
+    live_sheet.clear(start='A3', end='M200')
+    update_sheet = workbook.worksheet_by_title('update')
+    update_sheet.cell('A1').value = ''
+    print('All sheets have been cleared.')
+
+
 if __name__ == "__main__":
     x = 1
     while x < 100:
+        clear_sheets = False
+
         timestamp = get_current_time()
 
         # Fetch announcements.json for race updates
@@ -320,6 +334,10 @@ if __name__ == "__main__":
         valid_races = ['450 Main Event', '450 Main Event #1', '450 Main Event #2', '450 Main Event #3', '450 Heat #1',
                        '450 Heat #2', '450 LCQ', '250 Main Event', '250 Main Event #1', '250 Main Event #2',
                        '250 Main Event #3', '250 Heat #1', '250 Heat #2', '250 LCQ']
+
+        if clear_sheets:
+            clear_data_sheets()
+
         if race in valid_races:
             pass
         else:
@@ -361,7 +379,7 @@ if __name__ == "__main__":
         else:
             # New race has just begun, update race name
             wks = workbook.worksheet_by_title('update')
-            wks.cell('A2').set_text_format('bold', True).value = race
+            wks.cell('A1').value = race
 
             # Begin updating live_timing for new race
             dataframe_to_sheets(df=comb_df, sheet='live_timing')
