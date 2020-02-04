@@ -383,7 +383,7 @@ if __name__ == "__main__":
 
             # Begin updating live_timing for new race
             dataframe_to_sheets(df=comb_df, sheet='live_timing')
-            print(f'{timestamp}: Downloading live timing data for {race}.')
+            print(f'{timestamp}: {race} in progress. Downloading live timing data.')
 
         time.sleep(30)
         x += 1
