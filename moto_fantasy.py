@@ -6,6 +6,7 @@ import time
 from configparser import ConfigParser
 from datetime import datetime, date
 from pathlib import Path
+import calendar
 
 import pandas as pd
 import pygsheets
@@ -132,7 +133,7 @@ def get_mf_rider_tables(ses, data_dir):
     else:
         print('Rider columns could not be found.')
 
-    dataframe_to_sheets(df=df_riders, sheet='rider_lists')
+    dataframe_to_sheets(df=df_riders, sheet='rider_list')
     df_riders.to_csv(data_dir, index=False)
     return df_riders
 
@@ -256,13 +257,13 @@ def create_pts_dict():
 def fix_race_name(event_str):
     event_str = event_str.replace('Last Chance Qualifier', 'LCQ')
     if 'Heat' in event_str:
-        event_str = re.sub("(\d{3}).*(Heat).*?#(\d).*", "\g<1> \g<2> #\g<3>", event_str)
+        event_str = re.sub(r"(\d{3}).*(Heat).*?#(\d).*", r"\g<1> \g<2> #\g<3>", event_str)
     elif 'LCQ' in event_str:
-        event_str = re.sub("(\d{3}).*(LCQ).*", "\g<1> \g<2>", event_str)
+        event_str = re.sub(r"(\d{3}).*(LCQ).*", r"\g<1> \g<2>", event_str)
     elif 'Main Event #' in event_str:  # Fix Main Events for Triple Crowns
-        event_str = re.sub("(\d{3}).*(Main Event).*?#([0-9]).*", "\g<1> \g<2> #\g<3>", event_str)
+        event_str = re.sub(r"(\d{3}).*(Main Event).*?#([0-9]).*", r"\g<1> \g<2> #\g<3>", event_str)
     elif 'Main Event' in event_str:
-        event_str = re.sub("(\d{3}).*(Main Event).*", "\g<1> \g<2>", event_str)
+        event_str = re.sub(r"(\d{3}).*(Main Event).*", r"\g<1> \g<2>", event_str)
     return event_str
 
 
@@ -289,7 +290,6 @@ def last_race_logs():
     else:
         last_logs = []
         print('Insufficient data to compare.')
-    print(last_logs)
     return last_logs
 
 
@@ -338,6 +338,17 @@ if __name__ == "__main__":
         if clear_sheets:
             clear_data_sheets()
 
+        # Get weekday number; 0-6 starting on Monday, 5 = Saturday
+        weekday_no = datetime.today().weekday()
+        # Get weekday name with calendar module
+        weekday = calendar.day_name[weekday_no]
+        if weekday == 'Saturday':
+            pass
+        else:
+            print(f'Today is {weekday}, skipping live_timing update.')
+            get_mf_data()
+            break
+
         if race in valid_races:
             pass
         else:
@@ -359,6 +370,8 @@ if __name__ == "__main__":
         else:
             print(f'Not enough data has been logged yet.')
             break
+
+        # Flow pattern to handle race day updates
 
         # RACE CHANGE?
         # If same race is continuing
