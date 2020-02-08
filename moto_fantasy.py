@@ -44,8 +44,9 @@ live_timing_dir = 'data/live_timing.csv'
 
 # Google Sheet workbook
 wb_name = '2020 fantasy supercross'
-g = pygsheets.authorize(client_secret='auth/client_secret.json')
+g = pygsheets.authorize(credentials_directory='auth')
 workbook = g.open(wb_name)
+print(f'"{wb_name}" loaded; {len(workbook.worksheets())} sheets found.')
 
 
 def get_mf_data():
@@ -350,6 +351,8 @@ if __name__ == "__main__":
         # Log races and completion status (e.g. ['250 Heat #1', 'incomplete'])
         current_race_info = [race, status]
         log_races(current_race_info)
+
+        breakpoint()
 
         # Get last 2 race logs to compare
         logs = last_race_logs()
