@@ -1,4 +1,5 @@
 # import argparse
+import calendar
 import csv
 import json
 import re
@@ -6,7 +7,6 @@ import time
 from configparser import ConfigParser
 from datetime import datetime, date
 from pathlib import Path
-import calendar
 
 import pandas as pd
 import pygsheets
@@ -37,6 +37,11 @@ mf_url_top_picks = f'{mf_url_base}/user/top-picks/2020-SX'
 # Live timing JSON URL
 live_url = f'http://americanmotocrosslive.com/xml/{series.lower()}/RaceResults.json'
 announce_url = f'http://americanmotocrosslive.com/xml/{series.lower()}/Announcements.json'
+
+# List of valid race names
+valid_races = ['450 Main Event', '450 Main Event #1', '450 Main Event #2', '450 Main Event #3', '450 Heat #1',
+               '450 Heat #2', '450 LCQ', '250 Main Event', '250 Main Event #1', '250 Main Event #2',
+               '250 Main Event #3', '250 Heat #1', '250 Heat #2', '250 LCQ']
 
 # Data files
 race_log = 'data/race_log.csv'
@@ -74,7 +79,8 @@ def get_mf_data():
 
             # Check if "Waiting For Rider List" present or if rider lists are available
             if 'Waiting For Rider List' in resp.text:
-                print('Rider lists are not currently available for download, loading lists from file.')
+                print('Rider lists are not currently available for download...')
+                print(f'Loading lists from file that were saved on {modified_date}...')
                 return pd.read_csv(rider_list_dir)
             else:
                 print('Fetching updated rider lists.')
@@ -227,7 +233,7 @@ def save_test_data(version):
     r_name = fix_race_name(data2['S'])
     version = version.replace(':', '.')
     live_file = f'test_data/live_timing_{r_name}_{version}.json'
-    announce_file = f'test_data/announcements_{r_name}_{version}.json'
+    announce_file = f'test_data/announce_{r_name}_{version}.json'
     with open(announce_file, 'w+') as lf:
         json.dump(data1, lf)
     with open(live_file, 'w+') as lf:
@@ -287,6 +293,13 @@ def get_current_time():
     return date_time_obj.strftime('%I:%M:%S')
 
 
+def get_current_weekday():
+    # Get weekday number; 0-6 starting on Monday, 5 = Saturday
+    wd_num = datetime.today().weekday()
+    # Get weekday name with calendar module
+    return calendar.day_name[wd_num]
+
+
 def log_races(event_info):
     with open(race_log, 'a', newline='') as af:
         writer = csv.writer(af)
@@ -319,6 +332,16 @@ def race_status(announce_json):
         return s
 
 
+def log_race_status():
+    a = get_json(announce_url)
+    # Get race title and its status ('incomplete' or 'complete')
+    r = fix_race_name(a['S'])
+    s = race_status(a)
+    current_race_info = [r, s]
+    log_races(current_race_info)
+    return r, s
+
+
 def clear_data_sheets():
     all_sheets = workbook.worksheets()
     for sheet in all_sheets:
@@ -335,29 +358,19 @@ def clear_data_sheets():
 if __name__ == "__main__":
     x = 1
     while x < 100:
+        if x == 1:
+            pass
+        else:
+            time.sleep(30)
+
+        x += 1
+
         clear_sheets = False
-
-        timestamp = get_current_time()
-        save_test_data(version=timestamp)
-        # Fetch announcements.json for race updates
-        announcements = get_json(announce_url)  # Returns JSON object
-
-        # Get race title and its status ('incomplete' or 'complete')
-        race = fix_race_name(announcements['S'])
-        status = race_status(announcements)
-
-        # Check if race is an acceptable value to continue
-        valid_races = ['450 Main Event', '450 Main Event #1', '450 Main Event #2', '450 Main Event #3', '450 Heat #1',
-                       '450 Heat #2', '450 LCQ', '250 Main Event', '250 Main Event #1', '250 Main Event #2',
-                       '250 Main Event #3', '250 Heat #1', '250 Heat #2', '250 LCQ']
-
         if clear_sheets:
             clear_data_sheets()
 
-        # Get weekday number; 0-6 starting on Monday, 5 = Saturday
-        weekday_no = datetime.today().weekday()
-        # Get weekday name with calendar module
-        weekday = calendar.day_name[weekday_no]
+        timestamp = get_current_time()
+        weekday = get_current_weekday()
         if weekday == 'Saturday':
             pass
         else:
@@ -365,18 +378,18 @@ if __name__ == "__main__":
             get_mf_data()
             break
 
+        save_test_data(version=timestamp)
+
+        # Get race title and its status ('incomplete' or 'complete')
+        race, status = log_race_status()
         if race in valid_races:
             pass
         else:
             print(f'"{race}" is either not tracked or will need to be corrected to successfully save results.')
-            break
+            continue
 
         # Combine live_timing and rider_lists from scratch
         comb_df = merge_live_timing(data=None)
-
-        # Log races and completion status (e.g. ['250 Heat #1', 'incomplete'])
-        current_race_info = [race, status]
-        log_races(current_race_info)
 
         # breakpoint()
 
@@ -387,7 +400,7 @@ if __name__ == "__main__":
             cur_info = logs[1]
         else:
             print(f'Not enough data has been logged yet.')
-            break
+            continue
 
         # Flow pattern to handle race day updates
 
@@ -419,6 +432,3 @@ if __name__ == "__main__":
             # Begin updating live_timing for new race
             dataframe_to_sheets(df=comb_df, sheet='live_timing')
             print(f'{timestamp}: {race} in progress. Downloading live timing data.')
-
-        time.sleep(30)
-        x += 1
