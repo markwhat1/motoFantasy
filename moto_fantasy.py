@@ -50,17 +50,17 @@ print(f'"{wb_name}" loaded; {len(workbook.worksheets())} sheets found.')
 
 
 def get_mf_data():
-    payload = {'login_username': username, 'login_password': password, 'login': 'true'}
-
     # Get file modification date and check if it was modified today
     p = Path(rider_list_dir)
     modified_date = date.fromtimestamp(p.stat().st_mtime)
     if date.today() == modified_date:
-        print('Returning rider_lists from csv file.')
-        return pd.read_csv(rider_list_dir)
+        print(f'File already updated on {modified_date}, returning saved rider_list from csv file...')
+        df = pd.read_csv(rider_list_dir)
+        print(f'{len(df.index)} riders were loaded from saved file.')
+        return df
     else:
         print('Checking if updated rider lists is available...')
-
+        payload = {'login_username': username, 'login_password': password, 'login': 'true'}
         # Use 'with' to ensure the session context is closed after use.
         with requests.Session() as s:
             s.post(mf_url_base, data=payload)
@@ -73,10 +73,11 @@ def get_mf_data():
 
             # Check if "Waiting For Rider List" present or if rider lists are available
             if 'Waiting For Rider List' in resp.text:
+                if date
                 print('Rider lists are not currently available for download, loading lists from file.')
                 return pd.read_csv(rider_list_dir)
             else:
-                print('Fetching updated rider lists.')
+                print('Fetching updated rider lists...')
                 return get_mf_rider_tables(s, data_dir=rider_list_dir)
 
 
@@ -335,9 +336,16 @@ if __name__ == "__main__":
     x = 1
     while x < 100:
         clear_sheets = False
+        if clear_sheets:
+            clear_data_sheets()
+
+        # List of valid race names
+        valid_races = ['450 Main Event', '450 Main Event #1', '450 Main Event #2', '450 Main Event #3', '450 Heat #1',
+                       '450 Heat #2', '450 LCQ', '250 Main Event', '250 Main Event #1', '250 Main Event #2',
+                       '250 Main Event #3', '250 Heat #1', '250 Heat #2', '250 LCQ']
 
         timestamp = get_current_time()
-        save_test_data(version=timestamp)
+
         # Fetch announcements.json for race updates
         announcements = get_json(announce_url)  # Returns JSON object
 
@@ -345,19 +353,13 @@ if __name__ == "__main__":
         race = fix_race_name(announcements['S'])
         status = race_status(announcements)
 
-        # Check if race is an acceptable value to continue
-        valid_races = ['450 Main Event', '450 Main Event #1', '450 Main Event #2', '450 Main Event #3', '450 Heat #1',
-                       '450 Heat #2', '450 LCQ', '250 Main Event', '250 Main Event #1', '250 Main Event #2',
-                       '250 Main Event #3', '250 Heat #1', '250 Heat #2', '250 LCQ']
-
-        if clear_sheets:
-            clear_data_sheets()
-
         if race in valid_races:
             pass
         else:
             print(f'"{race}" is either not tracked or will need to be corrected to successfully save results.')
             break
+
+        save_test_data(version=timestamp)
 
         # Combine live_timing and rider_lists from scratch
         comb_df = merge_live_timing(data=None)
