@@ -133,7 +133,7 @@ def get_mf_rider_tables(ses, data_dir):
     else:
         print('Rider columns could not be found.')
 
-    dataframe_to_sheets(df=df_riders, sheet='rider_lists')
+    dataframe_to_sheets(df=df_riders, sheet='rider_list')
     df_riders.to_csv(data_dir, index=False)
     return df_riders
 
@@ -220,6 +220,20 @@ def get_json(url):
     return data
 
 
+def save_test_data(version):
+    data1 = get_json(announce_url)
+    data2 = get_json(live_url)
+    r_name = fix_race_name(data2['S'])
+    version = version.replace(':', '.')
+    live_file = f'test_data/live_timing_{r_name}_{version}.json'
+    announce_file = f'test_data/announcements_{r_name}_{version}.json'
+    with open(announce_file, 'w+') as lf:
+        json.dump(data1, lf)
+    with open(live_file, 'w+') as lf:
+        json.dump(data2, lf)
+    return
+
+
 def format_name(df_column):
     """
     :df: DataSeries:
@@ -290,7 +304,6 @@ def last_race_logs():
     else:
         last_logs = []
         print('Insufficient data to compare.')
-    print(last_logs)
     return last_logs
 
 
@@ -315,6 +328,7 @@ def clear_data_sheets():
     update_sheet = workbook.worksheet_by_title('update')
     update_sheet.cell('A1').value = ''
     print('All sheets have been cleared.')
+    return
 
 
 if __name__ == "__main__":
@@ -323,7 +337,7 @@ if __name__ == "__main__":
         clear_sheets = False
 
         timestamp = get_current_time()
-
+        save_test_data(version=timestamp)
         # Fetch announcements.json for race updates
         announcements = get_json(announce_url)  # Returns JSON object
 
@@ -352,7 +366,7 @@ if __name__ == "__main__":
         current_race_info = [race, status]
         log_races(current_race_info)
 
-        breakpoint()
+        # breakpoint()
 
         # Get last 2 race logs to compare
         logs = last_race_logs()
