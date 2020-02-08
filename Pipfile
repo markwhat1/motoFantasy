@@ -9,5 +9,6 @@ requests = "*"
 "bs4" = "*"
 numpy = "*"
 lxml = "*"
+pytest = "*"
 
 [dev-packages]

@@ -45,8 +45,9 @@ live_timing_dir = 'data/live_timing.csv'
 
 # Google Sheet workbook
 wb_name = '2020 fantasy supercross'
-g = pygsheets.authorize(client_secret='auth/client_secret.json')
+g = pygsheets.authorize(credentials_directory='auth')
 workbook = g.open(wb_name)
+print(f'"{wb_name}" loaded; {len(workbook.worksheets())} sheets found.')
 
 
 def get_mf_data():
@@ -220,6 +221,20 @@ def get_json(url):
     return data
 
 
+def save_test_data(version):
+    data1 = get_json(announce_url)
+    data2 = get_json(live_url)
+    r_name = fix_race_name(data2['S'])
+    version = version.replace(':', '.')
+    live_file = f'test_data/live_timing_{r_name}_{version}.json'
+    announce_file = f'test_data/announcements_{r_name}_{version}.json'
+    with open(announce_file, 'w+') as lf:
+        json.dump(data1, lf)
+    with open(live_file, 'w+') as lf:
+        json.dump(data2, lf)
+    return
+
+
 def format_name(df_column):
     """
     :df: DataSeries:
@@ -314,6 +329,7 @@ def clear_data_sheets():
     update_sheet = workbook.worksheet_by_title('update')
     update_sheet.cell('A1').value = ''
     print('All sheets have been cleared.')
+    return
 
 
 if __name__ == "__main__":
@@ -322,7 +338,7 @@ if __name__ == "__main__":
         clear_sheets = False
 
         timestamp = get_current_time()
-
+        save_test_data(version=timestamp)
         # Fetch announcements.json for race updates
         announcements = get_json(announce_url)  # Returns JSON object
 
@@ -361,6 +377,8 @@ if __name__ == "__main__":
         # Log races and completion status (e.g. ['250 Heat #1', 'incomplete'])
         current_race_info = [race, status]
         log_races(current_race_info)
+
+        # breakpoint()
 
         # Get last 2 race logs to compare
         logs = last_race_logs()
