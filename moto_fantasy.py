@@ -6,6 +6,7 @@ import time
 from configparser import ConfigParser
 from datetime import datetime, date
 from pathlib import Path
+import calendar
 
 import pandas as pd
 import pygsheets
@@ -50,17 +51,17 @@ print(f'"{wb_name}" loaded; {len(workbook.worksheets())} sheets found.')
 
 
 def get_mf_data():
+    payload = {'login_username': username, 'login_password': password, 'login': 'true'}
+
     # Get file modification date and check if it was modified today
     p = Path(rider_list_dir)
     modified_date = date.fromtimestamp(p.stat().st_mtime)
     if date.today() == modified_date:
-        print(f'File already updated on {modified_date}, returning saved rider_list from csv file...')
-        df = pd.read_csv(rider_list_dir)
-        print(f'{len(df.index)} riders were loaded from saved file.')
-        return df
+        print('Returning rider_lists from csv file.')
+        return pd.read_csv(rider_list_dir)
     else:
         print('Checking if updated rider lists is available...')
-        payload = {'login_username': username, 'login_password': password, 'login': 'true'}
+
         # Use 'with' to ensure the session context is closed after use.
         with requests.Session() as s:
             s.post(mf_url_base, data=payload)
@@ -73,11 +74,10 @@ def get_mf_data():
 
             # Check if "Waiting For Rider List" present or if rider lists are available
             if 'Waiting For Rider List' in resp.text:
-                if date
                 print('Rider lists are not currently available for download, loading lists from file.')
                 return pd.read_csv(rider_list_dir)
             else:
-                print('Fetching updated rider lists...')
+                print('Fetching updated rider lists.')
                 return get_mf_rider_tables(s, data_dir=rider_list_dir)
 
 
@@ -272,13 +272,13 @@ def create_pts_dict():
 def fix_race_name(event_str):
     event_str = event_str.replace('Last Chance Qualifier', 'LCQ')
     if 'Heat' in event_str:
-        event_str = re.sub("(\d{3}).*(Heat).*?#(\d).*", "\g<1> \g<2> #\g<3>", event_str)
+        event_str = re.sub(r"(\d{3}).*(Heat).*?#(\d).*", r"\g<1> \g<2> #\g<3>", event_str)
     elif 'LCQ' in event_str:
-        event_str = re.sub("(\d{3}).*(LCQ).*", "\g<1> \g<2>", event_str)
+        event_str = re.sub(r"(\d{3}).*(LCQ).*", r"\g<1> \g<2>", event_str)
     elif 'Main Event #' in event_str:  # Fix Main Events for Triple Crowns
-        event_str = re.sub("(\d{3}).*(Main Event).*?#([0-9]).*", "\g<1> \g<2> #\g<3>", event_str)
+        event_str = re.sub(r"(\d{3}).*(Main Event).*?#([0-9]).*", r"\g<1> \g<2> #\g<3>", event_str)
     elif 'Main Event' in event_str:
-        event_str = re.sub("(\d{3}).*(Main Event).*", "\g<1> \g<2>", event_str)
+        event_str = re.sub(r"(\d{3}).*(Main Event).*", r"\g<1> \g<2>", event_str)
     return event_str
 
 
@@ -336,16 +336,9 @@ if __name__ == "__main__":
     x = 1
     while x < 100:
         clear_sheets = False
-        if clear_sheets:
-            clear_data_sheets()
-
-        # List of valid race names
-        valid_races = ['450 Main Event', '450 Main Event #1', '450 Main Event #2', '450 Main Event #3', '450 Heat #1',
-                       '450 Heat #2', '450 LCQ', '250 Main Event', '250 Main Event #1', '250 Main Event #2',
-                       '250 Main Event #3', '250 Heat #1', '250 Heat #2', '250 LCQ']
 
         timestamp = get_current_time()
-
+        save_test_data(version=timestamp)
         # Fetch announcements.json for race updates
         announcements = get_json(announce_url)  # Returns JSON object
 
@@ -353,13 +346,30 @@ if __name__ == "__main__":
         race = fix_race_name(announcements['S'])
         status = race_status(announcements)
 
+        # Check if race is an acceptable value to continue
+        valid_races = ['450 Main Event', '450 Main Event #1', '450 Main Event #2', '450 Main Event #3', '450 Heat #1',
+                       '450 Heat #2', '450 LCQ', '250 Main Event', '250 Main Event #1', '250 Main Event #2',
+                       '250 Main Event #3', '250 Heat #1', '250 Heat #2', '250 LCQ']
+
+        if clear_sheets:
+            clear_data_sheets()
+
+        # Get weekday number; 0-6 starting on Monday, 5 = Saturday
+        weekday_no = datetime.today().weekday()
+        # Get weekday name with calendar module
+        weekday = calendar.day_name[weekday_no]
+        if weekday == 'Saturday':
+            pass
+        else:
+            print(f'Today is {weekday}, skipping live_timing update.')
+            get_mf_data()
+            break
+
         if race in valid_races:
             pass
         else:
             print(f'"{race}" is either not tracked or will need to be corrected to successfully save results.')
             break
-
-        save_test_data(version=timestamp)
 
         # Combine live_timing and rider_lists from scratch
         comb_df = merge_live_timing(data=None)
@@ -378,6 +388,8 @@ if __name__ == "__main__":
         else:
             print(f'Not enough data has been logged yet.')
             break
+
+        # Flow pattern to handle race day updates
 
         # RACE CHANGE?
         # If same race is continuing
