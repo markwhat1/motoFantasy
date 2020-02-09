@@ -48,12 +48,6 @@ race_log = 'data/race_log.csv'
 rider_list_dir = 'data/rider_lists.csv'
 live_timing_dir = 'data/live_timing.csv'
 
-# Google Sheet workbook
-wb_name = '2020 fantasy supercross'
-g = pygsheets.authorize(credentials_directory='auth')
-workbook = g.open(wb_name)
-print(f'"{wb_name}" loaded; {len(workbook.worksheets())} sheets found.')
-
 
 def get_mf_data():
     payload = {'login_username': username, 'login_password': password, 'login': 'true'}
@@ -62,7 +56,7 @@ def get_mf_data():
     p = Path(rider_list_dir)
     modified_date = date.fromtimestamp(p.stat().st_mtime)
     if date.today() == modified_date:
-        print('Returning rider_lists from csv file.')
+        # print('Returning rider_lists from csv file...')
         return pd.read_csv(rider_list_dir)
     else:
         print('Checking if updated rider lists is available...')
@@ -75,7 +69,7 @@ def get_mf_data():
             resp = s.get(mf_url_status)
 
             # Make sure username is in html to verify login was successful, else show error message
-            assert username in resp.text, 'It appears authentication was unsuccessful.'
+            assert username in resp.text, 'It appears authentication was unsuccessful...'
 
             # Check if "Waiting For Rider List" present or if rider lists are available
             if 'Waiting For Rider List' in resp.text:
@@ -83,7 +77,7 @@ def get_mf_data():
                 print(f'Loading lists from file that were saved on {modified_date}...')
                 return pd.read_csv(rider_list_dir)
             else:
-                print('Fetching updated rider lists.')
+                print('Fetching updated rider lists...')
                 return get_mf_rider_tables(s, data_dir=rider_list_dir)
 
 
@@ -163,12 +157,19 @@ def get_live_timing_table():
     return df_live_timing
 
 
-def merge_live_timing(data=None):
+def merge_live_timing(data=None, live_data=None, rider_data=None):
     if data:
         df = data
+    # elif rider_data:
+    #     df_riders = rider_data
     else:
-        df_live = get_live_timing_table()
         df_riders = get_mf_data()
+
+    # else:
+    #     if live_data:
+    #         df_live = live_data
+    #     else:
+        df_live = get_live_timing_table()
 
         # Keep only needed columns from rider lists
         df_riders = df_riders[['mf_name', 'hc', 'udog']]
@@ -209,7 +210,7 @@ def merge_live_timing(data=None):
 
 def dataframe_to_sheets(df, sheet):
     s = workbook.worksheet_by_title(sheet)
-    s.clear(start='A2')
+    s.clear(start='A2', end='M100')
     # Set DataFrame to cell A2
     s.set_dataframe(df, (3, 1))
     return
@@ -324,12 +325,13 @@ def last_race_logs():
 def race_status(announce_json):
     event_list = announce_json['B']  # Returns list of events from announcements json
     complete_str = 'Session Complete'  # Search in M keys
+    s = ''
     for event in event_list:
         if complete_str in event['M']:
             s = 'complete'
         else:
             s = 'incomplete'
-        return s
+    return s
 
 
 def log_race_status():
@@ -356,14 +358,22 @@ def clear_data_sheets():
 
 
 if __name__ == "__main__":
-    x = 1
+    # Google Sheet workbook
+    wb_name = '2020 fantasy supercross'
+    g = pygsheets.authorize(credentials_directory='auth')
+    workbook = g.open(wb_name)
+    print(f'"{wb_name}" authorized; {len(workbook.worksheets())} sheets found.')
+
+    # riders = get_mf_data()
+
+    x = 0
+    sleep_timer = 30  # time in seconds
     while x < 100:
-        if x == 1:
+        if x == 0:
+            x += 1
             pass
         else:
-            time.sleep(30)
-
-        x += 1
+            time.sleep(sleep_timer)
 
         clear_sheets = False
         if clear_sheets:
@@ -378,18 +388,22 @@ if __name__ == "__main__":
             get_mf_data()
             break
 
-        save_test_data(version=timestamp)
-
+        # save_test_data(version=timestamp)
         # Get race title and its status ('incomplete' or 'complete')
         race, status = log_race_status()
         if race in valid_races:
+            x += 1
             pass
+        elif 'Practice' in race:
+            print(f'{x}: Currently in {race}, races have not started yet.')
+            continue
         else:
-            print(f'"{race}" is either not tracked or will need to be corrected to successfully save results.')
+            print(f'{x}: "{race}" is either not tracked or will need to be corrected to successfully save results.')
             continue
 
         # Combine live_timing and rider_lists from scratch
         comb_df = merge_live_timing(data=None)
+        dataframe_to_sheets(df=comb_df, sheet='live_timing')
 
         # breakpoint()
 
@@ -407,28 +421,30 @@ if __name__ == "__main__":
         # RACE CHANGE?
         # If same race is continuing
         if cur_info[0] == prev_info[0]:
-
             # COMPLETION CHANGE?
-            if cur_info[1] is 'incomplete':
-                dataframe_to_sheets(df=comb_df, sheet='live_timing')
+            if cur_info[1] == 'incomplete':
                 print(f'{timestamp}: {race} in progress. Downloading live timing data.')
+                dataframe_to_sheets(df=comb_df, sheet='live_timing')
 
-            elif cur_info[1] is 'complete':
-                if prev_info[1] is 'incomplete':
+            elif cur_info[1] == 'complete':
+                if prev_info[1] == 'incomplete':
+                    print(f'{timestamp}: {race} complete. Archiving copy of live timing table.')
                     # If completion statuses are different and race is the same,
                     # then the race has to have changed from incomplete to complete
                     dataframe_to_sheets(df=comb_df, sheet='live_timing')
                     dataframe_to_sheets(df=comb_df, sheet=race)
-                    print(f'{timestamp}: {race} complete. Archiving copy of live timing table.')
+                    wks = workbook.worksheet_by_title('update')
+                    complete_race_title = race + ' - Complete'
+                    wks.cell('A1').value = complete_race_title
                 else:
                     print(f'{timestamp}: {race} complete. Waiting for next race to begin.')
 
         # Else if new race has begun
         else:
             # New race has just begun, update race name
+            print(f'{timestamp}: {race} bas begun. Downloading live timing data.')
             wks = workbook.worksheet_by_title('update')
             wks.cell('A1').value = race
 
             # Begin updating live_timing for new race
             dataframe_to_sheets(df=comb_df, sheet='live_timing')
-            print(f'{timestamp}: {race} in progress. Downloading live timing data.')
