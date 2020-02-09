@@ -3,15 +3,12 @@ url = "https://pypi.python.org/simple"
 verify_ssl = true
 
 [packages]
-keyring = "*"
 pandas = "*"
 pygsheets = "*"
 requests = "*"
 "bs4" = "*"
-schedule = "*"
-xmltodict = "*"
 numpy = "*"
 lxml = "*"
-html5lib = "*"
+pytest = "*"
 
 [dev-packages]
