@@ -160,15 +160,8 @@ def get_live_timing_table():
 def merge_live_timing(data=None, live_data=None, rider_data=None):
     if data:
         df = data
-    # elif rider_data:
-    #     df_riders = rider_data
     else:
         df_riders = get_mf_data()
-
-    # else:
-    #     if live_data:
-    #         df_live = live_data
-    #     else:
         df_live = get_live_timing_table()
 
         # Keep only needed columns from rider lists
@@ -211,8 +204,8 @@ def merge_live_timing(data=None, live_data=None, rider_data=None):
 def dataframe_to_sheets(df, sheet):
     s = workbook.worksheet_by_title(sheet)
     s.clear(start='A2', end='M100')
-    # Set DataFrame to cell A2
-    s.set_dataframe(df, (3, 1))
+    # Set DataFrame to cell A3
+    s.set_dataframe(df, (3, 1))  # (row, column)
     return
 
 
