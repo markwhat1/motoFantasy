@@ -370,9 +370,9 @@ if __name__ == "__main__":
     sleep_timer = 30  # time in seconds
     while x < 100:
         if x == 0:
-            x += 1
             pass
         else:
+            x += 1
             time.sleep(sleep_timer)
 
         clear_sheets = False
