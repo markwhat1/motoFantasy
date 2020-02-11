@@ -149,7 +149,7 @@ def get_live_timing_table():
     # Replace live_timing column names with column_name dictionary
     df_live_timing = pd.DataFrame.from_records(live_timing['B'], columns=list(column_names.keys()))
     df_live_timing.rename(columns=column_names, inplace=True)
-    df_live_timing['name'] = df_live_timing['name'].str.title()
+    df_live_timing['name'] = df_live_timing['name'].str.title()  # Title = Capital first letter, then lowercase
     df_live_timing['name_formatted'] = format_name(df_live_timing['name'])
 
     # Save live timing DataFrame to CSV
@@ -160,15 +160,8 @@ def get_live_timing_table():
 def merge_live_timing(data=None, live_data=None, rider_data=None):
     if data:
         df = data
-    # elif rider_data:
-    #     df_riders = rider_data
     else:
         df_riders = get_mf_data()
-
-    # else:
-    #     if live_data:
-    #         df_live = live_data
-    #     else:
         df_live = get_live_timing_table()
 
         # Keep only needed columns from rider lists
@@ -179,7 +172,7 @@ def merge_live_timing(data=None, live_data=None, rider_data=None):
         # df_riders['mf_name'] = df_riders['mf_name'].str.replace('DeCotis', 'Decotis')
 
         # Merge LiveTiming and rider lists on name columns
-        # Left keeps all rows from live_timing, even if no matches found
+        # "how='left'" keeps all rows from live_timing, even if no matches found
         df = df_live.merge(df_riders, how='left', left_on='name_formatted', right_on='mf_name')
 
         # Calc adjusted position, then set any 0 values to 1 as you can't finish less than 1
@@ -204,7 +197,6 @@ def merge_live_timing(data=None, live_data=None, rider_data=None):
         df = df.drop(['mf_name', 'pts_normal', 'pts_udog', 'adj_pos'], axis=1)  #
         df = df.fillna(0, downcast='infer')
         df.style.hide_index()
-
     return df
 
 
@@ -364,7 +356,9 @@ if __name__ == "__main__":
     workbook = g.open(wb_name)
     print(f'"{wb_name}" authorized; {len(workbook.worksheets())} sheets found.')
 
-    # riders = get_mf_data()
+    clear_sheets = False
+    if clear_sheets:
+        clear_data_sheets()
 
     x = 0
     sleep_timer = 30  # time in seconds
@@ -375,27 +369,25 @@ if __name__ == "__main__":
             x += 1
             time.sleep(sleep_timer)
 
-        clear_sheets = False
-        if clear_sheets:
-            clear_data_sheets()
-
         timestamp = get_current_time()
         weekday = get_current_weekday()
         if weekday == 'Saturday':
             pass
         else:
+            # If not Saturday, update rider lists then exit
             print(f'Today is {weekday}, skipping live_timing update.')
             get_mf_data()
             break
 
-        # save_test_data(version=timestamp)
         # Get race title and its status ('incomplete' or 'complete')
         race, status = log_race_status()
         if race in valid_races:
-            x += 1
             pass
         elif 'Practice' in race:
             print(f'{x}: Currently in {race}, races have not started yet.')
+            continue
+        elif 'Sighting Lap' in race:
+            print(f'{x}: {race} underway, main event to start shortly.')
             continue
         else:
             print(f'{x}: "{race}" is either not tracked or will need to be corrected to successfully save results.')
@@ -403,7 +395,6 @@ if __name__ == "__main__":
 
         # Combine live_timing and rider_lists from scratch
         comb_df = merge_live_timing(data=None)
-        dataframe_to_sheets(df=comb_df, sheet='live_timing')
 
         # breakpoint()
 
