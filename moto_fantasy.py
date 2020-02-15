@@ -27,12 +27,8 @@ username = parser.get('motocross_fantasy', 'username')
 password = parser.get('motocross_fantasy', 'password')
 race_type = parser.get('motocross_fantasy', 'race_type')
 
-mf_url_base = parser.get('motocross_fantasy', 'mf_url')
-mf_url_status = f'{mf_url_base}/user/team-status'
-mf_url_team_standings = f'{mf_url_base}/user/bench-racing-divisions/{leagueID}'
-mf_url_week_standings = f'{mf_url_base}/user/weekly-standings/{leagueID}'
-mf_url_race_results = f'{mf_url_base}/user/race-results'
-mf_url_top_picks = f'{mf_url_base}/user/top-picks/2020-SX'
+mf_url = parser.get('motocross_fantasy', 'mf_url')
+mf_url_status = f'{mf_url}/user/team-status'
 
 # Live timing JSON URL
 live_url = f'http://americanmotocrosslive.com/xml/{series.lower()}/RaceResults.json'
@@ -63,7 +59,7 @@ def get_mf_data():
 
         # Use 'with' to ensure the session context is closed after use.
         with requests.Session() as s:
-            s.post(mf_url_base, data=payload)
+            s.post(mf_url, data=payload)
 
             # Get rider list url contents to check
             resp = s.get(mf_url_status)
