@@ -339,7 +339,7 @@ def clear_data_sheets():
             sheet.clear(start='A3')
     live_sheet = workbook.worksheet_by_title('live_timing')
     live_sheet.clear(start='A3', end='M200')
-    update_sheet = workbook.worksheet_by_title('update')
+    update_sheet = workbook.worksheet_by_title('live_timing')
     update_sheet.cell('A1').value = ''
     print('All sheets have been cleared.')
     return
@@ -360,12 +360,12 @@ if __name__ == "__main__":
     sleep_timer = 30  # time in seconds
     while x < 100:
         if x == 0:
+            x += 1
             pass
         else:
             x += 1
             time.sleep(sleep_timer)
 
-        timestamp = get_current_time()
         weekday = get_current_weekday()
         if weekday == 'Saturday':
             pass
@@ -410,27 +410,27 @@ if __name__ == "__main__":
         if cur_info[0] == prev_info[0]:
             # COMPLETION CHANGE?
             if cur_info[1] == 'incomplete':
-                print(f'{timestamp}: {race} in progress. Downloading live timing data.')
+                print(f'{x}: {race} in progress. Downloading live timing data.')
                 dataframe_to_sheets(df=comb_df, sheet='live_timing')
 
             elif cur_info[1] == 'complete':
                 if prev_info[1] == 'incomplete':
-                    print(f'{timestamp}: {race} complete. Archiving copy of live timing table.')
+                    print(f'{x}: {race} complete. Archiving copy of live timing table.')
                     # If completion statuses are different and race is the same,
                     # then the race has to have changed from incomplete to complete
                     dataframe_to_sheets(df=comb_df, sheet='live_timing')
                     dataframe_to_sheets(df=comb_df, sheet=race)
-                    wks = workbook.worksheet_by_title('update')
+                    wks = workbook.worksheet_by_title('live_timing')
                     complete_race_title = race + ' - Complete'
                     wks.cell('A1').value = complete_race_title
                 else:
-                    print(f'{timestamp}: {race} complete. Waiting for next race to begin.')
+                    print(f'{x}: {race} complete. Waiting for next race to begin.')
 
         # Else if new race has begun
         else:
             # New race has just begun, update race name
-            print(f'{timestamp}: {race} bas begun. Downloading live timing data.')
-            wks = workbook.worksheet_by_title('update')
+            print(f'{x}: {race} bas begun. Downloading live timing data.')
+            wks = workbook.worksheet_by_title('live_timing')
             wks.cell('A1').value = race
 
             # Begin updating live_timing for new race
