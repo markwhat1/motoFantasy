@@ -344,6 +344,23 @@ def clear_data_sheets():
     return
 
 
+def has_completed(log):
+    prev, curr = assign_logs(log)
+
+    return
+
+
+def assign_logs(logs):
+    if logs:
+        pre = logs[0]
+        cur = logs[1]
+        both = [pre, cur]
+    else:
+        print(f'Not enough data has been logged yet.')
+        both = ''
+    return both
+
+
 if __name__ == "__main__":
     # Google Sheet workbook
     wb_name = '2020 fantasy supercross'
