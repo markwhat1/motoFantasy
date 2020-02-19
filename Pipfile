@@ -10,5 +10,6 @@ requests = "*"
 numpy = "*"
 lxml = "*"
 pytest = "*"
+jupyter = "*"
 
 [dev-packages]

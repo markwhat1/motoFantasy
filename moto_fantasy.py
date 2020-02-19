@@ -140,6 +140,7 @@ def get_live_timing_table():
     live_timing = get_json(live_url)
     race_name = live_timing['S']
     race_class = re.sub(r"(\d{3}).*$", r"\g<1>", race_name)
+
     # New column names in dictionary for replacement
     column_names = {'A': 'pos', 'F': 'name', 'N': 'num', 'L': 'laps', 'G': 'gap', 'D': 'diff', 'BL': 'bestlap',
                     'LL': 'lastlap', 'S': 'status'}
@@ -147,9 +148,9 @@ def get_live_timing_table():
     # Replace live_timing column names with column_name dictionary
     df_live_timing = pd.DataFrame.from_records(live_timing['B'], columns=list(column_names.keys()))
     df_live_timing.rename(columns=column_names, inplace=True)
-    df_live_timing['name'] = df_live_timing['name'].str.title()  # Title = Capital first letter, then lowercase
-    df_live_timing['name_formatted'] = format_name(df_live_timing['name'])
-    df_live_timing['live_key'] = str(race_class) + df_live_timing['name_formatted']
+    df_live_timing['name'] = df_live_timing['name'].str.title()  # Title = Capital First Letter, Then Lowercase
+    # df_live_timing['name_formatted'] = format_name(df_live_timing['name'])
+    df_live_timing['live_key'] = str(race_class) + format_name(df_live_timing['name'])
 
     # Save live timing DataFrame to CSV
     df_live_timing.to_csv(live_timing_dir, index=False)
@@ -422,7 +423,6 @@ if __name__ == "__main__":
                 # First if statement checks if the last race has completed
                 if prev_info[1] == 'incomplete' and cur_info[0] in ['450 Main Event', '450 Main Event #3']:
                     print(f'{timestamp}: {race} complete. Archiving copy of live timing table.')
-                    print('This concludes the supercross races.')
                     # If completion statuses are different and race is the same,
                     # then the race has to have changed from incomplete to complete
                     wks = workbook.worksheet_by_title('live_timing')
@@ -430,6 +430,7 @@ if __name__ == "__main__":
                     wks.cell('A1').value = complete_race_title
                     dataframe_to_sheets(df=comb_df, sheet='live_timing')
                     dataframe_to_sheets(df=comb_df, sheet=race)
+                    print('This concludes the supercross races.')
                     RACES_COMPLETE = True
                 elif prev_info[1] == 'incomplete':
                     print(f'{timestamp}: {race} complete. Archiving copy of live timing table.')
