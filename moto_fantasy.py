@@ -49,7 +49,7 @@ def get_mf_data():
 
     # Get file modification date and check if it was modified today
     p = Path(rider_list_dir)
-    modified_date = date.fromx(p.stat().st_mtime)
+    modified_date = date.fromtimestamp(p.stat().st_mtime)
     if date.today() == modified_date:
         # print('Returning rider_lists from csv file...')
         return pd.read_csv(rider_list_dir)
