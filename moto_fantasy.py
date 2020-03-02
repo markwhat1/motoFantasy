@@ -48,7 +48,7 @@ def get_mf_data():
 
     # Get file modification date and check if it was modified today
     p = Path(rider_list_dir)
-    modified_date = date.fromx(p.stat().st_mtime)
+    modified_date = date.fromtimestamp(p.stat().st_mtime)
     if date.today() == modified_date:
         # print('Returning rider_lists from csv file...')
         return pd.read_csv(rider_list_dir)
@@ -124,8 +124,9 @@ def get_mf_rider_tables(ses, data_dir):
     if len(df_riders.columns) == 5:
         df_riders.columns = cols
         df_riders['mf_name'] = df_riders['mf_name'].str.title()
-        df_riders['mf_name_formatted'] = format_name(df_riders['mf_name'])
-        df_riders['mf_key'] = df_riders['class'].astype(str) + df_riders['mf_name_formatted']
+        df_riders['mf_name'] = df_riders['mf_name'].replace('Zachary Osborne', 'Zach Osborne')
+        df_riders['mf_name'] = df_riders['mf_name'].replace('Malcom Stewart', 'Malcolm Stewart')
+        df_riders['mf_key'] = df_riders['class'].astype(str) + df_riders['mf_name']
     else:
         print('Rider columns could not be found.')
 
@@ -146,9 +147,11 @@ def get_live_timing_table():
     # Replace live_timing column names with column_name dictionary
     df_live_timing = pd.DataFrame.from_records(live_timing['B'], columns=list(column_names.keys()))
     df_live_timing.rename(columns=column_names, inplace=True)
+    df_live_timing['name'] = df_live_timing['name'].str.strip() # Remove trailing spaces from names
     df_live_timing['name'] = df_live_timing['name'].str.title()  # Title = Capital First Letter, Then Lowercase
     # df_live_timing['name_formatted'] = format_name(df_live_timing['name'])
-    df_live_timing['live_key'] = str(race_class) + format_name(df_live_timing['name'])
+    # df_live_timing['live_key'] = str(race_class) + format_name(df_live_timing['name'])
+    df_live_timing['df_key'] = str(race_class) + df_live_timing['name'].astype(str)
 
     # Save live timing DataFrame to CSV
     df_live_timing.to_csv(live_timing_dir, index=False)
@@ -162,35 +165,84 @@ def merge_live_timing(data=None):
         df_riders = get_mf_data()
         df_live = get_live_timing_table()
 
-        # Keep only needed columns from rider lists
-        df_riders = df_riders[['mf_key', 'hc', 'udog']]
+        # Merge live_timing with mf_rider data
+        df = merge_mf_riders(df_live)
 
-        # Merge LiveTiming and rider lists on name columns
-        # "how='left'" keeps all rows from live_timing, even if no matches found
-        df = df_live.merge(df_riders, how='left', left_on='live_key', right_on='mf_key')
+        df_with_pts = calculate_pts(df)
+        df_with_pts.style.hide_index()
+
+        # # Keep only needed columns from rider lists
+        # df_riders = df_riders[['mf_key', 'hc', 'udog']]
+        #
+        # # Merge LiveTiming and rider lists on name columns
+        # # "how='left'" keeps all rows from live_timing, even if no matches found
+        # df = df_live.merge(df_riders, how='left', left_on='live_key', right_on='mf_key')
 
         # Calc adjusted position, then set any 0 values to 1 as you can't finish less than 1
-        df['adj_pos'] = df['pos'] - df['hc']
-        df['adj_pos'] = df.adj_pos.mask(df.adj_pos <= 0, 1)
-        df = df.fillna(0, downcast='infer')
+        # df['adj_pos'] = df['pos'] - df['hc']
+        # df['adj_pos'] = df.adj_pos.mask(df.adj_pos <= 0, 1)
+        # df = df.fillna(0, downcast='infer')
+        #
+        # # Create points dictionary and then map adj_pos values to each point total
+        # points = create_pts_dict()
+        # df['pts_normal'] = df['adj_pos'].map(points['normal'])
+        # df['pts_udog'] = df['adj_pos'].map(points['udog'])
+        #
+        # # When these filters are true, don't change values; if not true, set value to 0
+        # filter1 = df['udog'] == 'Yes'
+        # filter2 = df['adj_pos'] <= 10
+        # df['pts_udog'] = df.pts_udog.where(filter1 & filter2, 0)
+        #
+        # # Find max points between udog and normal point totals, then drop unused columns
+        # df['pts'] = df[['pts_normal', 'pts_udog']].max(axis=1)
+        #
+        # # Drop unnecessary columns
+        # df = df.drop(['mf_key', 'pts_normal', 'pts_udog', 'adj_pos'], axis=1)  # axis=1 refers to columns
+        # df = df.fillna(0, downcast='infer')
+    return df_with_pts
 
-        # Create points dictionary and then map adj_pos values to each point total
-        points = create_pts_dict()
-        df['pts_normal'] = df['adj_pos'].map(points['normal'])
-        df['pts_udog'] = df['adj_pos'].map(points['udog'])
 
-        # When these filters are true, don't change values; if not true, set value to 0
-        filter1 = df['udog'] == 'Yes'
-        filter2 = df['adj_pos'] <= 10
-        df['pts_udog'] = df.pts_udog.where(filter1 & filter2, 0)
+def calculate_pts(df):
+    df['adj_pos'] = df['pos'] - df['hc']
+    df['adj_pos'] = df.adj_pos.mask(df.adj_pos <= 0, 1)
+    df = df.fillna(0, downcast='infer')
 
-        # Find max points between udog and normal point totals, then drop unused columns
-        df['pts'] = df[['pts_normal', 'pts_udog']].max(axis=1)
+    # Create points dictionary and then map adj_pos values to each point total
+    points = create_pts_dict()
+    df['pts_normal'] = df['adj_pos'].map(points['normal'])
+    df['pts_udog'] = df['adj_pos'].map(points['udog'])
 
-        # Drop unnecessary columns
-        df = df.drop(['mf_key', 'pts_normal', 'pts_udog', 'adj_pos'], axis=1)  # axis=1 refers to columns
-        df = df.fillna(0, downcast='infer')
-        df.style.hide_index()
+    # When these filters are true, don't change values; if not true, set value to 0
+    filter1 = df['udog'] == 'Yes'
+    filter2 = df['adj_pos'] <= 10
+    df['pts_udog'] = df.pts_udog.where(filter1 & filter2, 0)
+
+    # Find max points between udog and normal point totals, then drop unused columns
+    df['pts'] = df[['pts_normal', 'pts_udog']].max(axis=1)
+    # Drop unnecessary columns
+    df = df.drop(['pts_normal', 'pts_udog', 'adj_pos'], axis=1)  # axis=1 refers to columns
+    df = df.fillna(0, downcast='infer')
+    return df
+
+
+def merge_mf_riders(df):
+    """:DataFrame
+    Must include 'pos' and 'df_key' column
+    key = class + rider name
+    """
+    # Keep only needed columns from rider lists
+    df_mf_riders = get_mf_data()
+    df_mf_riders = df_mf_riders[['mf_key', 'hc', 'udog']]
+
+    # Merge LiveTiming and rider lists on name columns
+    # "how='left'" keeps all rows from live_timing, even if no matches found
+    df = df.merge(df_mf_riders, how='left', left_on='df_key', right_on='mf_key')
+    df_merged = df.drop(['mf_key'], axis=1)  # axis=1 refers to columns
+    return df_merged
+
+
+def create_df_key(df):
+    df['df_key'] = df['class'].astype(str) + df['name']
     return df
 
 
@@ -435,7 +487,7 @@ if __name__ == "__main__":
             # If not Saturday, update rider lists then exit
             print(f'Today is {weekday}, skipping live_timing update.')
             get_mf_data()
-            break
+            # break
 
         # Get race title and its status ('incomplete' or 'complete')
         race, status = log_race_status()
@@ -453,7 +505,7 @@ if __name__ == "__main__":
         if logs:
             pass
         else:
-            print(f'Not enough data has been logged yet.')
+            print(f'Not enough data has b     een logged yet.')
             continue  # Continue skips the rest of the loop and starts over at the top
 
         if race_has_changed(logs):
@@ -462,7 +514,7 @@ if __name__ == "__main__":
             update_race_header(race)
             live_timing_to_sheets(comb_df)
         # Race is the same, using completion status to decide rest of paths
-        elif race_has_completed(logs):  # curr[1] == 'complete'
+        elif race_has_completed(logs):
             # Race complete, check if race just completed
             if race_has_just_completed(logs):  # prev[1] == 'incomplete'
                 # If completion statuses are different and race is the same,
@@ -477,7 +529,7 @@ if __name__ == "__main__":
             # Race already archived, waiting on new results
             else:
                 print(f'{x}: {race} complete. Waiting for next race to begin.')
-        else:  # curr[1] == 'incomplete'
+        else:
             # Race is ongoing, continue to make updates
             print(f'{x}: {race} in progress. Downloading live timing data.')
             live_timing_to_sheets(comb_df)

@@ -11,5 +11,6 @@ numpy = "*"
 lxml = "*"
 pytest = "*"
 jupyter = "*"
+jupyter-contrib-nbextensions = "*"
 
 [dev-packages]

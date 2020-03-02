@@ -1,133 +1,143 @@
-class,mf_name,hc,lf,udog
-450,"Aeck, Co.",16,-,Yes
-450,"Anderson, Ja.",5,14th,No
-450,"Assuncao, He.",16,-,Yes
-450,"Autenrieth, Ca.",14,-,Yes
-450,"Baggett, Bl.",-2,3rd,Yes
-450,"Barcia, Ju.",4,5th,No
-450,"Bloss, Be.",10,17th,Yes
-450,"Bogle, Ju.",8,-,Yes
-450,"Bowers, Ty.",8,16th,Yes
-450,"Brayton, Ju.",0,7th,Yes
-450,"Breece, Ry.",12,22nd,Yes
-450,"Buller, Jo.",16,-,Yes
-450,"Cartwright, Jo.",14,-,Yes
-450,"Catanzaro, Aj.",16,-,Yes
-450,"Champion, Sc.",16,-,Yes
-450,"Chisholm, Ky.",10,18th,Yes
-450,"Cianciarulo, Ad.",2,2nd,No
-450,"Clason, Ca.",16,-,Yes
-450,"Clermont, Ja.",13,20th,Yes
-450,"Cloyed, Di.",16,-,Yes
-450,"Cros, Jo.",16,-,Yes
-450,"Cunningham, Ky.",12,-,Yes
-450,"Custer, Ty.",16,-,Yes
-450,"Davalos, Ma.",5,12th,Yes
-450,"Decotis, Ji.",11,-,Yes
-450,"Dillin, Ky.",16,-,Yes
-450,"Enticknap, Ad.",16,-,Yes
-450,"Fitch, Ro.",16,-,Yes
-450,"Friese, Vi.",7,15th,Yes
-450,"Greco, Jo.",16,-,Yes
-450,"Herrlein, Da.",16,-,Yes
-450,"Hill, Ju.",2,9th,Yes
-450,"Hogan, Ja.",16,-,Yes
-450,"Lesher, Ja.",16,-,Yes
-450,"Lionnet, Br.",16,-,Yes
-450,"Martin, Va.",16,-,Yes
-450,"Merriam, Dy.",16,-,Yes
-450,"Milson, Ja.",16,-,Yes
-450,"Nagy, Al.",16,-,Yes
-450,"Noren, Fr.",12,-,Yes
-450,"Osborne, Za.",2,11th,Yes
-450,"Pauli, Th.",16,-,Yes
-450,"Plessinger, Aa.",3,10th,Yes
-450,"Politelli, Au.",16,-,Yes
-450,"Raper, De.",15,-,Yes
-450,"Ray, Al.",11,19th,Yes
-450,"Reed, Ch.",11,21st,Yes
-450,"Robin, Je.",14,-,Yes
-450,"Roczen, Ke.",3,6th,No
-450,"Schmidt, Ni.",16,-,Yes
-450,"Short, Jo.",15,-,Yes
-450,"Siminoe, Aa.",16,-,Yes
-450,"Smith, Tr.",16,-,Yes
-450,"Starling, Ju.",15,-,Yes
-450,"Stephenson, Ca.",16,-,Yes
-450,"Stewart, Br.",16,-,Yes
-450,"Stewart, Ma.",1,8th,Yes
-450,"Stewart, Ro.",16,-,Yes
-450,"Tedder, Da.",16,-,Yes
-450,"Thurman, Cu.",16,-,Yes
-450,"Tickle, Br.",7,-,Yes
-450,"Tomac, El.",2,4th,No
-450,"Vanbuskirk, Co.",16,-,Yes
-450,"Webb, Co.",1,1st,No
-450,"Weeks, Ja.",16,-,Yes
-450,"Wennerstrom, Sc.",16,-,Yes
-450,"Wightman, Jo.",16,-,Yes
-450,"Wilson, De.",3,13th,Yes
-450,"Winter, Du.",16,-,Yes
-250,"Albright, Tj.",16,-,Yes
-250,"Bailey, Jo.",3,-,Yes
-250,"Barboa, Ka.",16,-,Yes
-250,"Cloyed, Di.",16,-,Yes
-250,"Crown, Jo.",16,-,Yes
-250,"Decotis, Ji.",-1,-,Yes
-250,"Duclos, Ja.",16,-,Yes
-250,"Eigenmann, Co.",16,-,Yes
-250,"Fleming, Pa.",16,-,Yes
-250,"Fleming, Wi.",16,-,Yes
-250,"Floyd, Ry.",16,-,Yes
-250,"Gaines, Ni.",11,-,Yes
-250,"Gilmore, Br.",16,-,Yes
-250,"Gordon, Ca.",16,-,Yes
-250,"Halpain, Ca.",16,-,Yes
-250,"Hampshire, Rj.",3,-,No
-250,"Hand, Je.",16,-,Yes
-250,"Harlan, Gr.",16,-,Yes
-250,"Hastings, Ez.",16,-,Yes
-250,"Heffner, Ko.",16,-,Yes
-250,"Hill, Jo.",5,-,Yes
-250,"Kerr, Ma.",16,-,Yes
-250,"Klippel, Br.",16,-,Yes
-250,"Kobusch, La.",16,-,Yes
-250,"Lane, Tr.",16,-,Yes
-250,"Leininger, Aa.",16,-,Yes
-250,"Lionnet, Br.",14,-,Yes
-250,"Locurcio, Lo.",8,-,Yes
-250,"Lopes, En.",9,-,Yes
-250,"Marchbanks, Ga.",0,-,Yes
-250,"Marley, Br.",16,-,Yes
-250,"Marquier, Ch.",10,-,Yes
-250,"Martin, Je.",4,-,No
-250,"Mcelrath, Sh.",2,-,No
-250,"Merrett, Za.",16,-,Yes
-250,"Moranz, Ke.",14,-,Yes
-250,"Moreau, Br.",7,-,Yes
-250,"Neese, Lu.",16,-,Yes
-250,"Owen, Ja.",8,-,Yes
-250,"Papi, Br.",16,-,Yes
-250,"Peters, Ky.",1,-,Yes
-250,"Peters, Ry.",16,-,Yes
-250,"Piazza, Bo.",16,-,Yes
-250,"Robin, Je.",10,-,Yes
-250,"Sanford, Ma.",16,-,Yes
-250,"Saultz, Ch.",16,-,Yes
-250,"Sayles, Hu.",16,-,Yes
-250,"Sewell, Tr.",16,-,Yes
-250,"Sexton, Ch.",1,-,No
-250,"Shaw, La.",16,-,Yes
-250,"Shimoda, Jo.",6,-,Yes
-250,"Short, Jo.",9,-,Yes
-250,"Smith, Jo.",4,-,No
-250,"Soubeyras, Ce.",10,-,Yes
-250,"St-Cyr, Gu.",16,-,Yes
-250,"Starling, Ju.",7,-,Yes
-250,"Stephenson, Ca.",16,-,Yes
-250,"Swanson, Ky.",16,-,Yes
-250,"Swoll, Ja.",6,-,Yes
-250,"Teasdale, Is.",14,-,Yes
-250,"Thompson, Ju.",14,-,Yes
-250,"Vanbuskirk, Co.",16,-,Yes
-250,"Winter, Du.",16,-,Yes
+class,mf_name,hc,lf,udog,mf_key
+450,Colton Aeck,16,-,Yes,450Colton Aeck
+450,Michael Akaydin,16,-,Yes,450Michael Akaydin
+450,Jason Anderson,3,3rd,No,450Jason Anderson
+450,Hector Assuncao,16,-,Yes,450Hector Assuncao
+450,Cade Autenrieth,14,-,Yes,450Cade Autenrieth
+450,Blake Baggett,1,10th,Yes,450Blake Baggett
+450,Justin Barcia,3,4th,No,450Justin Barcia
+450,Benny Bloss,10,-,Yes,450Benny Bloss
+450,Justin Bogle,9,-,Yes,450Justin Bogle
+450,Tyler Bowers,7,16th,Yes,450Tyler Bowers
+450,Justin Brayton,1,21st,Yes,450Justin Brayton
+450,Ryan Breece,10,14th,Yes,450Ryan Breece
+450,Johnnie Buller,16,-,Yes,450Johnnie Buller
+450,Joshua Cartwright,14,-,Yes,450Joshua Cartwright
+450,Aj Catanzaro,16,-,Yes,450Aj Catanzaro
+450,Scott Champion,16,-,Yes,450Scott Champion
+450,Kyle Chisholm,9,15th,Yes,450Kyle Chisholm
+450,Adam Cianciarulo,5,-,No,450Adam Cianciarulo
+450,Cade Clason,16,-,Yes,450Cade Clason
+450,Jason Clermont,15,-,Yes,450Jason Clermont
+450,Dillon Cloyed,16,-,Yes,450Dillon Cloyed
+450,Joan Cros,16,-,Yes,450Joan Cros
+450,Kyle Cunningham,10,18th,Yes,450Kyle Cunningham
+450,Tyler Custer,16,-,Yes,450Tyler Custer
+450,Martin Davalos,6,17th,Yes,450Martin Davalos
+450,Kyle Dillin,16,-,Yes,450Kyle Dillin
+450,Adam Enticknap,14,-,Yes,450Adam Enticknap
+450,Robert Fitch,16,-,Yes,450Robert Fitch
+450,Vince Friese,4,11th,Yes,450Vince Friese
+450,Josh Greco,16,-,Yes,450Josh Greco
+450,Daniel Herrlein,15,-,Yes,450Daniel Herrlein
+450,Justin Hill,0,6th,Yes,450Justin Hill
+450,Jake Hogan,16,-,Yes,450Jake Hogan
+450,Mathias Jorgensen,16,-,Yes,450Mathias Jorgensen
+450,Logan Karnow,14,-,Yes,450Logan Karnow
+450,Ben Lamay,12,-,Yes,450Ben Lamay
+450,Jared Lesher,16,-,Yes,450Jared Lesher
+450,Bradley Lionnet,16,-,Yes,450Bradley Lionnet
+450,Vann Martin,16,-,Yes,450Vann Martin
+450,Dylan Merriam,16,-,Yes,450Dylan Merriam
+450,Henry Miller,15,-,Yes,450Henry Miller
+450,James Milson,16,-,Yes,450James Milson
+450,Alexander Nagy,16,-,Yes,450Alexander Nagy
+450,Fredrik Noren,12,-,Yes,450Fredrik Noren
+450,Zach Osborne,2,5th,Yes,450Zach Osborne
+450,Theodore Pauli,16,-,Yes,450Theodore Pauli
+450,Aaron Plessinger,3,8th,Yes,450Aaron Plessinger
+450,Austin Politelli,16,-,Yes,450Austin Politelli
+450,Deven Raper,15,-,Yes,450Deven Raper
+450,Alex Ray,12,-,Yes,450Alex Ray
+450,Chad Reed,10,13th,Yes,450Chad Reed
+450,Ken Roczen,2,2nd,No,450Ken Roczen
+450,Nicholas Schmidt,16,-,Yes,450Nicholas Schmidt
+450,John Short,15,-,Yes,450John Short
+450,Aaron Siminoe,16,-,Yes,450Aaron Siminoe
+450,Ryan Smith,16,-,Yes,450Ryan Smith
+450,Travis Smith,16,-,Yes,450Travis Smith
+450,Carter Stephenson,16,-,Yes,450Carter Stephenson
+450,Bryce Stewart,16,-,Yes,450Bryce Stewart
+450,Malcolm Stewart,0,7th,Yes,450Malcolm Stewart
+450,Ronnie Stewart,14,20th,Yes,450Ronnie Stewart
+450,Dakota Tedder,16,-,Yes,450Dakota Tedder
+450,Curren Thurman,16,-,Yes,450Curren Thurman
+450,Eli Tomac,1,1st,No,450Eli Tomac
+450,Cody Vanbuskirk,16,-,Yes,450Cody Vanbuskirk
+450,Cooper Webb,4,12th,No,450Cooper Webb
+450,James Weeks,13,19th,Yes,450James Weeks
+450,Scott Wennerstrom,16,-,Yes,450Scott Wennerstrom
+450,Joel Wightman,16,-,Yes,450Joel Wightman
+450,Dean Wilson,1,9th,Yes,450Dean Wilson
+450,Dustin Winter,16,-,Yes,450Dustin Winter
+250,Tj Albright,16,-,Yes,250Tj Albright
+250,Jordan Bailey,5,11th,Yes,250Jordan Bailey
+250,Kameron Barboa,16,-,Yes,250Kameron Barboa
+250,Pierce Brown,6,-,Yes,250Pierce Brown
+250,Dillon Cloyed,16,-,Yes,250Dillon Cloyed
+250,Joey Crown,0,7th,Yes,250Joey Crown
+250,Jimmy Decotis,2,-,Yes,250Jimmy Decotis
+250,Kyle Dillin,16,-,Yes,250Kyle Dillin
+250,Jamison Duclos,16,-,Yes,250Jamison Duclos
+250,Colton Eigenmann,16,-,Yes,250Colton Eigenmann
+250,Parker Fleming,16,-,Yes,250Parker Fleming
+250,Wilson Fleming,12,21st,Yes,250Wilson Fleming
+250,Ryder Floyd,16,-,Yes,250Ryder Floyd
+250,Nick Gaines,9,-,Yes,250Nick Gaines
+250,Brady Gilmore,16,-,Yes,250Brady Gilmore
+250,Carter Gordon,16,-,Yes,250Carter Gordon
+250,Wristin Grigg,16,-,Yes,250Wristin Grigg
+250,Carter Halpain,16,-,Yes,250Carter Halpain
+250,Rj Hampshire,2,3rd,No,250Rj Hampshire
+250,Jeremy Hand,16,-,Yes,250Jeremy Hand
+250,Grant Harlan,16,-,Yes,250Grant Harlan
+250,Ezra Hastings,16,-,Yes,250Ezra Hastings
+250,Kobe Heffner,16,-,Yes,250Kobe Heffner
+250,Hayden Hefner,16,-,Yes,250Hayden Hefner
+250,Josh Hill,1,6th,Yes,250Josh Hill
+250,Richard Jackson,11,17th,Yes,250Richard Jackson
+250,Mason Kerr,16,-,Yes,250Mason Kerr
+250,Brice Klippel,16,-,Yes,250Brice Klippel
+250,Lance Kobusch,16,-,Yes,250Lance Kobusch
+250,Tristan Lane,15,-,Yes,250Tristan Lane
+250,Aaron Leininger,16,-,Yes,250Aaron Leininger
+250,Bradley Lionnet,15,-,Yes,250Bradley Lionnet
+250,Lorenzo Locurcio,8,14th,Yes,250Lorenzo Locurcio
+250,Enzo Lopes,5,8th,Yes,250Enzo Lopes
+250,Garrett Marchbanks,4,5th,No,250Garrett Marchbanks
+250,Brandon Marley,16,-,Yes,250Brandon Marley
+250,Chase Marquier,12,-,Yes,250Chase Marquier
+250,Jeremy Martin,3,4th,No,250Jeremy Martin
+250,Shane Mcelrath,1,2nd,No,250Shane Mcelrath
+250,Zane Merrett,16,-,Yes,250Zane Merrett
+250,Kevin Moranz,12,19th,Yes,250Kevin Moranz
+250,Hardy Munoz,16,-,Yes,250Hardy Munoz
+250,Vincent Murphy,16,-,Yes,250Vincent Murphy
+250,Luke Neese,15,-,Yes,250Luke Neese
+250,Jace Owen,4,18th,Yes,250Jace Owen
+250,Brock Papi,16,-,Yes,250Brock Papi
+250,Kyle Peters,2,22nd,Yes,250Kyle Peters
+250,Ryan Peters,16,-,Yes,250Ryan Peters
+250,Bobby Piazza,16,-,Yes,250Bobby Piazza
+250,Jerry Robin,10,-,Yes,250Jerry Robin
+250,Darian Sanayei,15,-,Yes,250Darian Sanayei
+250,Maxwell Sanford,16,-,Yes,250Maxwell Sanford
+250,Chad Saultz,16,-,Yes,250Chad Saultz
+250,Hunter Sayles,12,-,Yes,250Hunter Sayles
+250,Travis Sewell,16,-,Yes,250Travis Sewell
+250,Chase Sexton,1,1st,No,250Chase Sexton
+250,Lane Shaw,16,-,Yes,250Lane Shaw
+250,Jo Shimoda,3,10th,Yes,250Jo Shimoda
+250,John Short,5,12th,Yes,250John Short
+250,Jordon Smith,5,13th,No,250Jordon Smith
+250,Cedric Soubeyras,7,-,Yes,250Cedric Soubeyras
+250,Guillaume St-Cyr,16,-,Yes,250Guillaume St-Cyr
+250,Justin Starling,10,-,Yes,250Justin Starling
+250,Carter Stephenson,16,-,Yes,250Carter Stephenson
+250,Kyle Swanson,16,-,Yes,250Kyle Swanson
+250,Jalek Swoll,5,9th,Yes,250Jalek Swoll
+250,Isaac Teasdale,11,20th,Yes,250Isaac Teasdale
+250,Justin Thompson,15,-,Yes,250Justin Thompson
+250,Curren Thurman,10,15th,Yes,250Curren Thurman
+250,Cody Vanbuskirk,16,-,Yes,250Cody Vanbuskirk
+250,Dustin Winter,10,16th,Yes,250Dustin Winter

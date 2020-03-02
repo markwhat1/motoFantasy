@@ -1,23 +1,23 @@
-pos,name,num,laps,gap,diff,bestlap,lastlap,status,name_formatted,live_key
-1,Shane Mcelrath ,12,19,--.---,--.---,49.884,54.851,Active,"Mcelrath, Sh.","250Mcelrath, Sh."
-2,Chase Sexton ,1E,19,2.962,2.962,49.838,52.017,Active,"Sexton, Ch.","250Sexton, Ch."
-3,Jeremy Martin ,6,19,4.300,7.263,50.146,53.866,Active,"Martin, Je.","250Martin, Je."
-4,Garrett Marchbanks ,36,19,5.272,12.535,49.948,52.418,Active,"Marchbanks, Ga.","250Marchbanks, Ga."
-5,Jordon Smith ,54,19,1.814,14.349,50.059,52.759,Active,"Smith, Jo.","250Smith, Jo."
-6,Rj Hampshire ,24,19,18.858,33.208,49.740,55.126,Active,"Hampshire, Rj.","250Hampshire, Rj."
-7,Kyle Peters ,38,19,8.924,42.132,51.970,54.711,Active,"Peters, Ky.","250Peters, Ky."
-8,Joey Crown ,355,19,2.870,45.003,52.033,54.547,Active,"Crown, Jo.","250Crown, Jo."
-9,James Decotis ,53,19,1.177,46.181,51.955,54.221,Active,"Decotis, Ja.","250Decotis, Ja."
-10,Jo Shimoda ,84,19,1.075,47.256,51.874,52.974,Active,"Shimoda, Jo.","250Shimoda, Jo."
-11,Jace Owen ,159,18,1 lap,1 lap,51.999,57.369,Active,"Owen, Ja.","250Owen, Ja."
-12,Joshua Hill ,175,18,1.572,1 lap,51.959,53.574,Active,"Hill, Jo.","250Hill, Jo."
-13,Cedric Soubeyras ,201,18,0.283,1 lap,52.556,54.835,Active,"Soubeyras, Ce.","250Soubeyras, Ce."
-14,Nick Gaines ,68,18,5.844,1 lap,52.233,57.525,Active,"Gaines, Ni.","250Gaines, Ni."
-15,John Short ,43,18,5.237,1 lap,52.465,1:02.366,Active,"Short, Jo.","250Short, Jo."
-16,Jerry Robin ,67,18,1.587,1 lap,52.440,56.069,Active,"Robin, Je.","250Robin, Je."
-17,Jordan Bailey ,39,18,17.280,1 lap,52.741,57.142,Active,"Bailey, Jo.","250Bailey, Jo."
-18,Hunter Sayles ,367,18,2.328,1 lap,53.787,57.299,Active,"Sayles, Hu.","250Sayles, Hu."
-19,Enzo Lopes ,66,18,1.483,1 lap,52.503,55.577,Active,"Lopes, En.","250Lopes, En."
-20,Justin Starling ,56,18,20.953,1 lap,53.889,1:01.947,Active,"Starling, Ju.","250Starling, Ju."
-21,Isaac Teasdale ,79,17,1 lap,2 laps,53.616,1:01.322,Active,"Teasdale, Is.","250Teasdale, Is."
-22,Curren Thurman ,981,3,14 laps,16 laps,57.130,1:02.588,OUT,"Thurman, Cu.","250Thurman, Cu."
+pos,name,num,laps,gap,diff,bestlap,lastlap,status,df_key
+1,Ken Roczen,94,25,--.---,--.---,51.041,55.451,Active,450Ken Roczen
+2,Justin Barcia,51,25,13.612,13.612,51.515,54.747,Active,450Justin Barcia
+3,Cooper Webb,1,25,3.107,16.719,51.574,53.503,Active,450Cooper Webb
+4,Eli Tomac,3,25,0.522,17.241,51.610,53.643,Active,450Eli Tomac
+5,Martin Davalos,37,25,2.530,19.771,51.838,56.959,Active,450Martin Davalos
+6,Justin Hill,46,25,3.600,23.372,51.784,55.208,Active,450Justin Hill
+7,Aaron Plessinger,7,25,2.218,25.591,51.992,54.970,Active,450Aaron Plessinger
+8,Malcolm Stewart,27,25,3.607,29.198,51.725,55.674,Active,450Malcolm Stewart
+9,Vince Friese,64,25,1.587,30.785,52.280,54.946,Active,450Vince Friese
+10,Dean Wilson,15,25,0.251,31.036,52.024,54.362,Active,450Dean Wilson
+11,Jason Anderson,21,25,7.123,38.159,51.516,1:09.473,Active,450Jason Anderson
+12,Justin Brayton,10,25,3.469,41.629,52.260,56.408,Active,450Justin Brayton
+13,Benny Bloss,50,25,11.584,53.213,52.508,58.279,Active,450Benny Bloss
+14,Tyler Bowers,34,24,1 lap,1 lap,52.968,58.285,Active,450Tyler Bowers
+15,Chad Reed,22,24,4.453,1 lap,53.219,56.059,Active,450Chad Reed
+16,Kyle Chisholm,11,24,1.809,1 lap,53.564,54.809,Active,450Kyle Chisholm
+17,Adam Enticknap,722,24,43.031,1 lap,53.693,57.690,Active,450Adam Enticknap
+18,Daniel Herrlein,393,24,3.889,1 lap,54.342,58.425,Active,450Daniel Herrlein
+19,Blake Baggett,4,23,1 lap,2 laps,53.086,57.402,Active,450Blake Baggett
+20,James Weeks,65,23,10.316,2 laps,54.522,59.015,Active,450James Weeks
+21,Kyle Cunningham,44,13,10 laps,12 laps,53.282,53.985,OUT,450Kyle Cunningham
+22,Ryan Breece,71,10,3 laps,15 laps,52.910,1:55.966,OUT,450Ryan Breece
