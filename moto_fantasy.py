@@ -16,13 +16,14 @@ from bs4 import BeautifulSoup
 # Load config.ini
 parser = ConfigParser()
 parser.read('config.ini')
+mf_config = parser['motocross_fantasy']
 
 # MotocrossFantasy.com variables and URLs
-series = parser.get('motocross_fantasy', 'series')
-username = parser.get('motocross_fantasy', 'username')
-password = parser.get('motocross_fantasy', 'password')
-race_type = parser.get('motocross_fantasy', 'race_type')
-mf_url = parser.get('motocross_fantasy', 'mf_url')
+series = mf_config['series']
+username = mf_config['username']
+password = mf_config['password']
+race_type = mf_config['race_type']
+mf_url = mf_config['mf_url']
 mf_url_status = f'{mf_url}/user/team-status'
 
 # Google Sheets info
