@@ -39,6 +39,28 @@ valid_races = ['450 Main Event', '450 Main Event #1', '450 Main Event #2', '450 
                '450 Heat #2', '450 LCQ', '250 Main Event', '250 Main Event #1', '250 Main Event #2',
                '250 Main Event #3', '250 Heat #1', '250 Heat #2', '250 LCQ']
 
+# List of valid event urls with tables of results
+event_urls = {
+    '250 Entry List': 'https://supercrosslive.com/results/current/2020/XXXXX/S2ENTRYLIST.html',
+    '450 Entry List': 'https://supercrosslive.com/results/current/2020/XXXXX/S1ENTRYLIST.html',
+    '250 Heat #1': 'https://supercrosslive.com/results/current/2020/XXXXX/S2H1RES.html',
+    '250 Heat #2': 'https://supercrosslive.com/results/current/2020/XXXXX/S2H2RES.html',
+    '450 Heat #1': 'https://supercrosslive.com/results/current/2020/XXXXX/S1H1RES.html',
+    '450 Heat #2': 'https://supercrosslive.com/results/current/2020/XXXXX/S1H2RES.html',
+    '250 LCQ': 'https://supercrosslive.com/results/current/2020/XXXXX/S2L1RES.html',
+    '450 LCQ': 'https://supercrosslive.com/results/current/2020/XXXXX/S1L1RES.html',
+    '250 Main Event-Provisional': 'https://supercrosslive.com/results/current/2020/XXXXX/S2F1RES.html',
+    '450 Main Event-Provisional': 'https://supercrosslive.com/results/current/2020/XXXXX/S1F1RES.html',
+    '250 Main Event': 'https://supercrosslive.com/results/current/2020/XXXXX/S2F1PRESS.html',
+    '450 Main Event': 'https://supercrosslive.com/results/current/2020/XXXXX/S1F1PRESS.html',
+    '450 Main Event #1': 'https://www.supercrosslive.com/results/current/2020/XXXXX/S1E1RES.html',
+    '450 Main Event #2': 'https://www.supercrosslive.com/results/current/2020/XXXXX/S1E2RES.html',
+    '450 Main Event #3': 'https://www.supercrosslive.com/results/current/2020/XXXXX/S1E3RES.html',
+    '250 Main Event #1': 'https://www.supercrosslive.com/results/current/2020/XXXXX/S2E1RES.html',
+    '250 Main Event #2': 'https://www.supercrosslive.com/results/current/2020/XXXXX/S2E2RES.html',
+    '250 Main Event #3': 'https://www.supercrosslive.com/results/current/2020/XXXXX/S2E3RES.html',
+}
+
 # Data files
 race_log = 'data/race_log.csv'
 rider_list_dir = 'data/rider_lists.csv'
